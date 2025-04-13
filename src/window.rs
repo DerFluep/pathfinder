@@ -1,14 +1,15 @@
 extern crate sdl3;
 
+use crate::float2::Float2;
 use crate::line::Line;
-use crate::Robot;
+use crate::robot::Robot;
 use sdl3::event::Event;
 use sdl3::keyboard::Keycode;
 use sdl3::pixels::Color;
 use sdl3::render::{FPoint, FRect};
 use std::time::Duration;
 
-pub fn create_window(room: &Vec<Line>, robot: &Robot) {
+pub fn create_window(room: &Vec<Line>, robot: &mut Robot) {
     let sdl_context = sdl3::init().unwrap();
     let video_subsystem = sdl_context.video().unwrap();
 
@@ -37,6 +38,9 @@ pub fn create_window(room: &Vec<Line>, robot: &Robot) {
         }
         // The rest of the game loop goes here...
 
+        canvas.set_draw_color(Color::RGB(0, 0, 0));
+        canvas.clear();
+
         canvas.set_draw_color(Color::RGB(255, 0, 0));
         room.iter().for_each(|wall| {
             canvas
@@ -49,10 +53,10 @@ pub fn create_window(room: &Vec<Line>, robot: &Robot) {
 
         canvas
             .draw_rect(FRect::new(
-                (robot.position.get_x() - robot.radius) / 10.0,
-                (robot.position.get_y() - robot.radius) / 10.0,
-                robot.radius * 2.0 / 10.0,
-                robot.radius * 2.0 / 10.0,
+                (robot.get_position().get_x() - robot.get_radius()) / 10.0,
+                (robot.get_position().get_y() - robot.get_radius()) / 10.0,
+                robot.get_radius() * 2.0 / 10.0,
+                robot.get_radius() * 2.0 / 10.0,
             ))
             .unwrap();
 

@@ -1,57 +1,17 @@
 mod float2;
 mod line;
+mod robot;
 mod window;
 
 use crate::float2::Float2;
 use crate::line::Line;
+use crate::robot::Robot;
 use crate::window::create_window;
-use std::f32::consts::PI;
 
 const RADIUS: f32 = 175.0;
-const RADIANS: f32 = PI / 180.0;
 
 // X goes to the right
 // Y goes down
-
-struct Robot {
-    direction: f32,
-    lidar: Vec<f32>,
-    position: Float2,
-    radius: f32,
-    sensor_collision: bool,
-    sensor_wall: bool,
-}
-
-impl Robot {
-    fn new() -> Self {
-        Self {
-            direction: 0.0,
-            lidar: vec![0.0; 360],
-            position: Float2::new(1000.0, 1000.0),
-            radius: RADIUS,
-            sensor_collision: false,
-            sensor_wall: false,
-        }
-    }
-
-    // ToDo
-    // - convert line to vector
-    // - check vector intersection
-    // https://www.gamedev.net/forums/topic/647810-intersection-point-of-two-vectors/5094127/
-    // - check if intersectionpoint is within the line
-    //     - if so: collision == true
-    fn lidar_scan(&self, room: Vec<Line>) {
-        let direction = 45.0 * RADIANS;
-        let ray_lidar = Float2::new(direction.cos(), direction.sin()) + self.position;
-        let mut wall_ray = room[0].get_b() - room[0].get_a();
-        let wall_ray_length = wall_ray.length();
-        wall_ray = wall_ray.make_unit() + room[0].get_a();
-    }
-
-    fn set_pos(&mut self, pos: Float2) {
-        self.position = pos;
-    }
-}
 
 fn bounding_box(room: &Vec<Line>) {
     let (mut min_x, mut min_y) = (f32::MAX, f32::MAX);
@@ -100,7 +60,7 @@ fn main() {
 
     bounding_box(&room);
 
-    let ilse = Robot::new();
+    let mut ilse = Robot::new();
 
-    create_window(&room, &ilse);
+    create_window(&room, &mut ilse);
 }
