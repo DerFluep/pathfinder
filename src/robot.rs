@@ -1,6 +1,6 @@
 use crate::float2::Float2;
 use crate::line::Line;
-use crate::utils::direction_to_vector;
+use crate::utils::{direction_to_vector, intersection_distance};
 
 pub enum Rotation {
     Left,
@@ -43,18 +43,31 @@ impl Robot {
         self.radius
     }
 
+    pub fn get_lidar(&self) -> Vec<f32> {
+        self.lidar.clone()
+    }
+
     // ToDo
     // - convert line to vector
     // - check vector intersection
     // https://www.gamedev.net/forums/topic/647810-intersection-point-of-two-vectors/5094127/
     // - check if intersectionpoint is within the line
     //     - if so: collision == true
-    fn lidar_scan(&self, room: Vec<Line>) {
-        let direction = 45.0 * RADIANS;
-        let ray_lidar = Float2::new(direction.cos(), direction.sin()) + self.position;
-        let mut wall_ray = room[0].get_b() - room[0].get_a();
-        let wall_ray_length = wall_ray.length();
-        wall_ray = wall_ray.make_unit() + room[0].get_a();
+    pub fn lidar_scan(&mut self, room: &Vec<Line>) {
+        self.lidar
+            .iter_mut()
+            .enumerate()
+            .for_each(|(num, distance)| {
+                let ray = direction_to_vector(num as f32);
+                let mut closest = f32::MAX;
+                room.iter().for_each(|wall| {
+                    let distance = intersection_distance(self.position, ray, *wall);
+                    if distance < closest {
+                        closest = distance;
+                    }
+                });
+                *distance = closest;
+            });
     }
 
     pub fn moving(&mut self, direction: &Direction) {

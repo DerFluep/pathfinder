@@ -2,6 +2,7 @@ extern crate sdl3;
 
 use crate::line::Line;
 use crate::robot::{Direction, Robot, Rotation};
+use crate::utils::direction_to_vector;
 use sdl3::event::Event;
 use sdl3::keyboard::Keycode;
 use sdl3::pixels::Color;
@@ -93,6 +94,26 @@ pub fn create_window(room: &Vec<Line>, robot: &mut Robot) {
                 robot.get_radius() * 2.0 / 10.0,
             ))
             .unwrap();
+
+        canvas.set_draw_color(Color::RGB(0, 255, 0));
+        robot.lidar_scan(&room);
+        robot
+            .get_lidar()
+            .iter()
+            .enumerate()
+            .for_each(|(num, distance)| {
+                let vector = direction_to_vector(num as f32);
+                let colision_point = (vector * *distance + robot.get_position()) / 10.0;
+                canvas
+                    .draw_line(
+                        FPoint::new(
+                            robot.get_position().get_x() / 10.0,
+                            robot.get_position().get_y() / 10.0,
+                        ),
+                        FPoint::new(colision_point.get_x(), colision_point.get_y()),
+                    )
+                    .unwrap()
+            });
 
         robot.rotate(&rotation);
         robot.moving(&direction);
