@@ -43,16 +43,14 @@ impl Robot {
         self.radius
     }
 
+    pub fn get_direction(&self) -> f32 {
+        self.direction
+    }
+
     pub fn get_lidar(&self) -> Vec<f32> {
         self.lidar.clone()
     }
 
-    // ToDo
-    // - convert line to vector
-    // - check vector intersection
-    // https://www.gamedev.net/forums/topic/647810-intersection-point-of-two-vectors/5094127/
-    // - check if intersectionpoint is within the line
-    //     - if so: collision == true
     pub fn lidar_scan(&mut self, room: &Vec<Line>) {
         self.lidar
             .iter_mut()

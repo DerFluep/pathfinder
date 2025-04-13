@@ -101,7 +101,19 @@ pub fn create_window(room: &Vec<Line>, robot: &mut Robot) {
                 robot.get_radius() * 2.0 / 10.0,
             ))
             .unwrap();
+        let vector = direction_to_vector(robot.get_direction());
+        let line_end = vector * robot.get_radius() + robot.get_position();
+        canvas
+            .draw_line(
+                FPoint::new(
+                    robot.get_position().get_x() / 10.0,
+                    robot.get_position().get_y() / 10.0,
+                ),
+                FPoint::new(line_end.get_x() / 10.0, line_end.get_y() / 10.0),
+            )
+            .unwrap();
 
+        // Draw Lidar
         if show_lidar {
             canvas.set_draw_color(Color::RGB(0, 255, 0));
             robot.lidar_scan(&room);
