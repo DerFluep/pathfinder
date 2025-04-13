@@ -1,9 +1,6 @@
 use crate::float2::Float2;
 use crate::line::Line;
-use std::f32::consts::PI;
-
-const RADIUS: f32 = 175.0;
-const RADIANS: f32 = PI / 180.0;
+use crate::utils::direction_to_vector;
 
 pub enum Rotation {
     Left,
@@ -32,7 +29,7 @@ impl Robot {
             direction: 90.0,
             lidar: vec![0.0; 360],
             position: Float2::new(1000.0, 1000.0),
-            radius: RADIUS,
+            radius: 175.0,
             sensor_collision: false,
             sensor_wall: false,
         }
@@ -61,9 +58,7 @@ impl Robot {
     }
 
     pub fn moving(&mut self, direction: &Direction) {
-        let radians = self.direction * RADIANS;
-        let vector = Float2::new(radians.cos(), radians.sin());
-        vector.make_unit();
+        let vector = direction_to_vector(self.direction);
         match direction {
             Direction::Forward => self.position += vector * 5.0,
             Direction::Backward => self.position -= vector * 5.0,

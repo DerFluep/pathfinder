@@ -1,14 +1,13 @@
 mod float2;
 mod line;
 mod robot;
+mod utils;
 mod window;
 
 use crate::float2::Float2;
 use crate::line::Line;
 use crate::robot::Robot;
 use crate::window::create_window;
-
-const RADIUS: f32 = 175.0;
 
 // X goes to the right
 // Y goes down
