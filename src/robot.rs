@@ -66,7 +66,7 @@ impl Robot {
         vector.make_unit();
         match direction {
             Direction::Forward => self.position += vector * 5.0,
-            Direction::Backword => self.position += vector * 5.0,
+            Direction::Backword => self.position -= vector * 5.0,
             Direction::None => {}
         }
     }

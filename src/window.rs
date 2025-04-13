@@ -1,6 +1,5 @@
 extern crate sdl3;
 
-use crate::float2::Float2;
 use crate::line::Line;
 use crate::robot::{Direction, Robot, Rotation};
 use sdl3::event::Event;
@@ -41,6 +40,16 @@ pub fn create_window(room: &Vec<Line>, robot: &mut Robot) {
                     repeat: false,
                     ..
                 } => rotation = Rotation::Left,
+                Event::KeyDown {
+                    keycode: Some(Keycode::Up),
+                    repeat: false,
+                    ..
+                } => direction = Direction::Forward,
+                Event::KeyDown {
+                    keycode: Some(Keycode::Down),
+                    repeat: false,
+                    ..
+                } => direction = Direction::Backword,
                 Event::KeyUp {
                     keycode: Some(Keycode::Left),
                     repeat: false,
