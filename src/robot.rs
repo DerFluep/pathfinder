@@ -26,9 +26,9 @@ pub struct Robot {
 impl Robot {
     pub fn new() -> Self {
         Self {
-            direction: 90.0,
+            direction: 0.0,
             lidar: vec![0.0; 360],
-            position: Float2::new(1000.0, 1000.0),
+            position: Float2::new(2000.0, 1000.0),
             radius: 175.0,
             sensor_collision: false,
             sensor_wall: false,
@@ -79,9 +79,29 @@ impl Robot {
 
     pub fn rotate(&mut self, rotation: &Rotation) {
         match rotation {
-            Rotation::Left => self.direction -= 3.0,
-            Rotation::Right => self.direction += 3.0,
+            Rotation::Left => self.direction -= 1.0,
+            Rotation::Right => self.direction += 1.0,
             Rotation::None => {}
+        }
+    }
+
+    pub fn run(&mut self, room: &Vec<Line>) {
+        // rotate to nearest wall
+        let mut min_dist = f32::MAX;
+        let mut min_dist_dir = f32::MAX;
+        self.lidar_scan(room);
+        self.lidar.iter().enumerate().for_each(|(num, dist)| {
+            if *dist < min_dist {
+                min_dist = *dist;
+                min_dist_dir = num as f32;
+            }
+        });
+
+        if min_dist_dir != 0.0 {
+            self.rotate(&Rotation::Left);
+        } else {
+            // move until colision
+            self.moving(&Direction::Forward);
         }
     }
 }
