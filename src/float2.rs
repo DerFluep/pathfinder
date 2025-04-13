@@ -55,6 +55,12 @@ impl std::ops::AddAssign<Float2> for Float2 {
     }
 }
 
+impl std::ops::SubAssign<Float2> for Float2 {
+    fn sub_assign(&mut self, rhs: Float2) {
+        *self = Self(self.0 - rhs.0, self.1 - rhs.1)
+    }
+}
+
 #[allow(dead_code)]
 impl Float2 {
     pub fn new(a: f32, b: f32) -> Self {
