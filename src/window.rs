@@ -25,6 +25,8 @@ pub fn create_window(room: &Vec<Line>, robot: &mut Robot) {
     canvas.clear();
     canvas.present();
 
+    let mut show_lidar = false;
+
     let mut rotation = Rotation::None;
     let mut direction = Direction::Forward;
     let mut event_pump = sdl_context.event_pump().unwrap();
@@ -51,6 +53,11 @@ pub fn create_window(room: &Vec<Line>, robot: &mut Robot) {
                     repeat: false,
                     ..
                 } => direction = Direction::Backward,
+                Event::KeyDown {
+                    keycode: Some(Keycode::Space),
+                    repeat: false,
+                    ..
+                } => show_lidar = !show_lidar,
                 Event::KeyUp {
                     keycode: Some(Keycode::Left),
                     repeat: false,
@@ -95,25 +102,27 @@ pub fn create_window(room: &Vec<Line>, robot: &mut Robot) {
             ))
             .unwrap();
 
-        canvas.set_draw_color(Color::RGB(0, 255, 0));
-        robot.lidar_scan(&room);
-        robot
-            .get_lidar()
-            .iter()
-            .enumerate()
-            .for_each(|(num, distance)| {
-                let vector = direction_to_vector(num as f32);
-                let colision_point = (vector * *distance + robot.get_position()) / 10.0;
-                canvas
-                    .draw_line(
-                        FPoint::new(
-                            robot.get_position().get_x() / 10.0,
-                            robot.get_position().get_y() / 10.0,
-                        ),
-                        FPoint::new(colision_point.get_x(), colision_point.get_y()),
-                    )
-                    .unwrap()
-            });
+        if show_lidar {
+            canvas.set_draw_color(Color::RGB(0, 255, 0));
+            robot.lidar_scan(&room);
+            robot
+                .get_lidar()
+                .iter()
+                .enumerate()
+                .for_each(|(num, distance)| {
+                    let vector = direction_to_vector(num as f32);
+                    let colision_point = (vector * *distance + robot.get_position()) / 10.0;
+                    canvas
+                        .draw_line(
+                            FPoint::new(
+                                robot.get_position().get_x() / 10.0,
+                                robot.get_position().get_y() / 10.0,
+                            ),
+                            FPoint::new(colision_point.get_x(), colision_point.get_y()),
+                        )
+                        .unwrap()
+                });
+        }
 
         robot.rotate(&rotation);
         robot.moving(&direction);
