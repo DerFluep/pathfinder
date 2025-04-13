@@ -32,7 +32,8 @@ pub fn intersection_distance(origin: Float2, vector: Float2, line: Line) -> f32 
     let t = ((point1_x - origin_x) * dy - (point1_y - origin_y) * dx) / denom;
     let s = ((point1_x - origin_x) * vector_y - (point1_y - origin_y) * vector_x) / denom;
 
-    let mut distance = f32::MAX;
+    // max lidar distance 20m
+    let mut distance = 20000.0;
     if t >= 0.0 && 0.0 <= s && s <= 1.0 {
         distance = t;
     }
