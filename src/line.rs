@@ -1,4 +1,6 @@
 use crate::float2::Float2;
+
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Line {
     a: Float2,
     b: Float2,
