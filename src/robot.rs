@@ -8,6 +8,7 @@ const RADIANS: f32 = PI / 180.0;
 pub enum Direction {
     Left,
     Right,
+    Forward,
 }
 
 pub struct Robot {
@@ -53,17 +54,16 @@ impl Robot {
         wall_ray = wall_ray.make_unit() + room[0].get_a();
     }
 
-    pub fn move_forward(&mut self) {
+    pub fn move_forward(&mut self, direction: &Direction) {
+        match direction {
+            Direction::Left => self.direction -= 3.0,
+            Direction::Right => self.direction += 3.0,
+            Direction::Forward => {}
+        }
+
         let radians = self.direction * RADIANS;
         let vector = Float2::new(radians.cos(), radians.sin());
         vector.make_unit();
         self.position += vector * 5.0;
-    }
-
-    pub fn rotate(&mut self, direction: Direction) {
-        match direction {
-            Direction::Left => self.direction -= 1.0,
-            Direction::Right => self.direction += 1.0,
-        }
     }
 }

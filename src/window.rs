@@ -24,6 +24,8 @@ pub fn create_window(room: &Vec<Line>, robot: &mut Robot) {
     canvas.set_draw_color(Color::RGB(0, 0, 0));
     canvas.clear();
     canvas.present();
+
+    let mut direction = Direction::Forward;
     let mut event_pump = sdl_context.event_pump().unwrap();
     'running: loop {
         for event in event_pump.poll_iter() {
@@ -35,18 +37,24 @@ pub fn create_window(room: &Vec<Line>, robot: &mut Robot) {
                 } => break 'running,
                 Event::KeyDown {
                     keycode: Some(Keycode::Left),
-                    repeat: true,
+                    repeat: false,
                     ..
-                } => {
-                    robot.rotate(Direction::Left);
-                }
+                } => direction = Direction::Left,
+                Event::KeyUp {
+                    keycode: Some(Keycode::Left),
+                    repeat: false,
+                    ..
+                } => direction = Direction::Forward,
                 Event::KeyDown {
                     keycode: Some(Keycode::Right),
-                    repeat: true,
+                    repeat: false,
                     ..
-                } => {
-                    robot.rotate(Direction::Right);
-                }
+                } => direction = Direction::Right,
+                Event::KeyUp {
+                    keycode: Some(Keycode::Right),
+                    repeat: false,
+                    ..
+                } => direction = Direction::Forward,
                 _ => {}
             }
         }
@@ -55,6 +63,7 @@ pub fn create_window(room: &Vec<Line>, robot: &mut Robot) {
         canvas.set_draw_color(Color::RGB(0, 0, 0));
         canvas.clear();
 
+        // Draw walls
         canvas.set_draw_color(Color::RGB(255, 0, 0));
         room.iter().for_each(|wall| {
             canvas
@@ -65,6 +74,7 @@ pub fn create_window(room: &Vec<Line>, robot: &mut Robot) {
                 .unwrap();
         });
 
+        // Draw robot
         canvas
             .draw_rect(FRect::new(
                 (robot.get_position().get_x() - robot.get_radius()) / 10.0,
@@ -74,7 +84,8 @@ pub fn create_window(room: &Vec<Line>, robot: &mut Robot) {
             ))
             .unwrap();
 
-        robot.move_forward();
+        robot.move_forward(&direction);
+
         canvas.present();
         ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
     }
