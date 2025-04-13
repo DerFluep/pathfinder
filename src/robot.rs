@@ -13,7 +13,7 @@ pub enum Rotation {
 
 pub enum Direction {
     Forward,
-    Backword,
+    Backward,
     None,
 }
 
@@ -66,7 +66,7 @@ impl Robot {
         vector.make_unit();
         match direction {
             Direction::Forward => self.position += vector * 5.0,
-            Direction::Backword => self.position -= vector * 5.0,
+            Direction::Backward => self.position -= vector * 5.0,
             Direction::None => {}
         }
     }

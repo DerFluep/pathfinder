@@ -49,7 +49,7 @@ pub fn create_window(room: &Vec<Line>, robot: &mut Robot) {
                     keycode: Some(Keycode::Down),
                     repeat: false,
                     ..
-                } => direction = Direction::Backword,
+                } => direction = Direction::Backward,
                 Event::KeyUp {
                     keycode: Some(Keycode::Left),
                     repeat: false,
