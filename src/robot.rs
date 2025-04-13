@@ -56,7 +56,7 @@ impl Robot {
             .iter_mut()
             .enumerate()
             .for_each(|(num, distance)| {
-                let ray = direction_to_vector(num as f32);
+                let ray = direction_to_vector(num as f32 + self.direction);
                 let mut closest = f32::MAX;
                 room.iter().for_each(|wall| {
                     let distance = intersection_distance(self.position, ray, *wall);

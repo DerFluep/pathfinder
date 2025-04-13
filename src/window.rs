@@ -122,7 +122,7 @@ pub fn create_window(room: &Vec<Line>, robot: &mut Robot) {
                 .iter()
                 .enumerate()
                 .for_each(|(num, distance)| {
-                    let vector = direction_to_vector(num as f32);
+                    let vector = direction_to_vector(num as f32 + robot.get_direction());
                     let colision_point = (vector * *distance + robot.get_position()) / 10.0;
                     canvas
                         .draw_line(
