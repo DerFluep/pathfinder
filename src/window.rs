@@ -2,7 +2,7 @@ extern crate sdl3;
 
 use crate::float2::Float2;
 use crate::line::Line;
-use crate::robot::Robot;
+use crate::robot::{Direction, Robot};
 use sdl3::event::Event;
 use sdl3::keyboard::Keycode;
 use sdl3::pixels::Color;
@@ -33,6 +33,20 @@ pub fn create_window(room: &Vec<Line>, robot: &mut Robot) {
                     keycode: Some(Keycode::Escape),
                     ..
                 } => break 'running,
+                Event::KeyDown {
+                    keycode: Some(Keycode::Left),
+                    repeat: true,
+                    ..
+                } => {
+                    robot.rotate(Direction::Left);
+                }
+                Event::KeyDown {
+                    keycode: Some(Keycode::Right),
+                    repeat: true,
+                    ..
+                } => {
+                    robot.rotate(Direction::Right);
+                }
                 _ => {}
             }
         }
@@ -60,6 +74,7 @@ pub fn create_window(room: &Vec<Line>, robot: &mut Robot) {
             ))
             .unwrap();
 
+        robot.move_forward();
         canvas.present();
         ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
     }

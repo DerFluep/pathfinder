@@ -5,6 +5,11 @@ use std::f32::consts::PI;
 const RADIUS: f32 = 175.0;
 const RADIANS: f32 = PI / 180.0;
 
+pub enum Direction {
+    Left,
+    Right,
+}
+
 pub struct Robot {
     direction: f32,
     lidar: Vec<f32>,
@@ -17,7 +22,7 @@ pub struct Robot {
 impl Robot {
     pub fn new() -> Self {
         Self {
-            direction: 0.0,
+            direction: 90.0,
             lidar: vec![0.0; 360],
             position: Float2::new(1000.0, 1000.0),
             radius: RADIUS,
@@ -48,7 +53,17 @@ impl Robot {
         wall_ray = wall_ray.make_unit() + room[0].get_a();
     }
 
-    pub fn set_pos(&mut self, pos: Float2) {
-        self.position = pos;
+    pub fn move_forward(&mut self) {
+        let radians = self.direction * RADIANS;
+        let vector = Float2::new(radians.cos(), radians.sin());
+        vector.make_unit();
+        self.position += vector * 5.0;
+    }
+
+    pub fn rotate(&mut self, direction: Direction) {
+        match direction {
+            Direction::Left => self.direction -= 1.0,
+            Direction::Right => self.direction += 1.0,
+        }
     }
 }
