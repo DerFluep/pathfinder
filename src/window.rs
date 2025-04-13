@@ -2,7 +2,7 @@ extern crate sdl3;
 
 use crate::float2::Float2;
 use crate::line::Line;
-use crate::robot::{Direction, Robot};
+use crate::robot::{Direction, Robot, Rotation};
 use sdl3::event::Event;
 use sdl3::keyboard::Keycode;
 use sdl3::pixels::Color;
@@ -25,6 +25,7 @@ pub fn create_window(room: &Vec<Line>, robot: &mut Robot) {
     canvas.clear();
     canvas.present();
 
+    let mut rotation = Rotation::None;
     let mut direction = Direction::Forward;
     let mut event_pump = sdl_context.event_pump().unwrap();
     'running: loop {
@@ -39,22 +40,22 @@ pub fn create_window(room: &Vec<Line>, robot: &mut Robot) {
                     keycode: Some(Keycode::Left),
                     repeat: false,
                     ..
-                } => direction = Direction::Left,
+                } => rotation = Rotation::Left,
                 Event::KeyUp {
                     keycode: Some(Keycode::Left),
                     repeat: false,
                     ..
-                } => direction = Direction::Forward,
+                } => rotation = Rotation::None,
                 Event::KeyDown {
                     keycode: Some(Keycode::Right),
                     repeat: false,
                     ..
-                } => direction = Direction::Right,
+                } => rotation = Rotation::Right,
                 Event::KeyUp {
                     keycode: Some(Keycode::Right),
                     repeat: false,
                     ..
-                } => direction = Direction::Forward,
+                } => rotation = Rotation::None,
                 _ => {}
             }
         }
@@ -84,7 +85,8 @@ pub fn create_window(room: &Vec<Line>, robot: &mut Robot) {
             ))
             .unwrap();
 
-        robot.move_forward(&direction);
+        robot.rotate(&rotation);
+        robot.moving(&direction);
 
         canvas.present();
         ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));

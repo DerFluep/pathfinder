@@ -5,10 +5,16 @@ use std::f32::consts::PI;
 const RADIUS: f32 = 175.0;
 const RADIANS: f32 = PI / 180.0;
 
-pub enum Direction {
+pub enum Rotation {
     Left,
     Right,
+    None,
+}
+
+pub enum Direction {
     Forward,
+    Backword,
+    None,
 }
 
 pub struct Robot {
@@ -54,16 +60,22 @@ impl Robot {
         wall_ray = wall_ray.make_unit() + room[0].get_a();
     }
 
-    pub fn move_forward(&mut self, direction: &Direction) {
-        match direction {
-            Direction::Left => self.direction -= 3.0,
-            Direction::Right => self.direction += 3.0,
-            Direction::Forward => {}
-        }
-
+    pub fn moving(&mut self, direction: &Direction) {
         let radians = self.direction * RADIANS;
         let vector = Float2::new(radians.cos(), radians.sin());
         vector.make_unit();
-        self.position += vector * 5.0;
+        match direction {
+            Direction::Forward => self.position += vector * 5.0,
+            Direction::Backword => self.position += vector * 5.0,
+            Direction::None => {}
+        }
+    }
+
+    pub fn rotate(&mut self, rotation: &Rotation) {
+        match rotation {
+            Rotation::Left => self.direction -= 3.0,
+            Rotation::Right => self.direction += 3.0,
+            Rotation::None => {}
+        }
     }
 }
