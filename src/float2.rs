@@ -1,5 +1,5 @@
 #[derive(Debug, Copy, Clone, PartialEq)]
-pub struct Float2(f64, f64);
+pub struct Float2(f32, f32);
 
 impl std::ops::Add for Float2 {
     type Output = Self;
@@ -25,10 +25,10 @@ impl std::ops::Mul<Float2> for Float2 {
     }
 }
 
-impl std::ops::Mul<f64> for Float2 {
+impl std::ops::Mul<f32> for Float2 {
     type Output = Self;
 
-    fn mul(self, other: f64) -> Self {
+    fn mul(self, other: f32) -> Self {
         Self(self.0 * other, self.1 * other)
     }
 }
@@ -41,32 +41,32 @@ impl std::ops::Div<Float2> for Float2 {
     }
 }
 
-impl std::ops::Div<f64> for Float2 {
+impl std::ops::Div<f32> for Float2 {
     type Output = Self;
 
-    fn div(self, other: f64) -> Self {
+    fn div(self, other: f32) -> Self {
         Self(self.0 / other, self.1 / other)
     }
 }
 
 #[allow(dead_code)]
 impl Float2 {
-    pub fn new(a: f64, b: f64) -> Self {
+    pub fn new(a: f32, b: f32) -> Self {
         Float2(a, b)
     }
-    pub fn get_x(&self) -> f64 {
+    pub fn get_x(&self) -> f32 {
         self.0
     }
-    pub fn get_y(&self) -> f64 {
+    pub fn get_y(&self) -> f32 {
         self.1
     }
-    pub fn set_x(&mut self, x: f64) {
+    pub fn set_x(&mut self, x: f32) {
         self.0 = x;
     }
-    pub fn set_y(&mut self, y: f64) {
+    pub fn set_y(&mut self, y: f32) {
         self.1 = y;
     }
-    pub fn length(self) -> f64 {
+    pub fn length(self) -> f32 {
         (self.0.powi(2) + self.1.powi(2)).sqrt()
     }
     pub fn make_unit(mut self) -> Self {
