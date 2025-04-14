@@ -115,6 +115,17 @@ impl Robot {
             viewport.draw(&room, &self);
             ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
         }
+
+        'moving: loop {
+            self.lidar_scan(&room);
+            if self.sensor_collision {
+                break 'moving;
+            }
+            self.moving(&Direction::Forward);
+            viewport.draw(&room, &self);
+            ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
+        }
+
         'endloop: loop {
             if viewport.get_input() {
                 break 'endloop;
