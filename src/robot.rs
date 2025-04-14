@@ -101,5 +101,11 @@ impl Robot {
             viewport.draw(&room, &self);
             ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
         }
+        'endloop: loop {
+            if viewport.get_input() {
+                break 'endloop;
+            }
+            viewport.draw(&room, &self);
+        }
     }
 }
