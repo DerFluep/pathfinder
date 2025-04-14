@@ -4,10 +4,13 @@ mod robot;
 mod utils;
 mod window;
 
+use robot::{Direction, Rotation};
+use std::time::Duration;
+use window::Viewport;
+
 use crate::float2::Float2;
 use crate::line::Line;
 use crate::robot::Robot;
-use crate::window::create_window;
 
 // X goes to the right
 // Y goes down
@@ -57,9 +60,21 @@ fn main() {
         wall.print();
     }
 
-    bounding_box(&room);
-
     let mut ilse = Robot::new();
 
-    create_window(&room, &mut ilse);
+    let mut viewport = Viewport::new();
+    let mut direction = Direction::Forward;
+    let mut rotation = Rotation::None;
+    let mut quit = false;
+    'running: loop {
+        if quit {
+            break 'running;
+        }
+        ilse.lidar_scan(&room);
+        ilse.rotate(&rotation);
+        ilse.moving(&direction);
+        viewport.get_input(&mut direction, &mut rotation, &mut quit);
+        viewport.draw(&room, &ilse);
+        ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
+    }
 }
