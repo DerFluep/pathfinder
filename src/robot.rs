@@ -54,7 +54,7 @@ impl Robot {
         self.lidar.clone()
     }
 
-    pub fn lidar_scan(&mut self, room: &Vec<Line>) {
+    fn lidar_scan(&mut self, room: &Vec<Line>) {
         self.lidar
             .iter_mut()
             .enumerate()
@@ -71,7 +71,7 @@ impl Robot {
             });
     }
 
-    pub fn moving(&mut self, direction: &Direction) {
+    fn moving(&mut self, direction: &Direction) {
         let vector = direction_to_vector(self.direction);
         match direction {
             Direction::Forward => self.position += vector * 5.0,
@@ -80,7 +80,7 @@ impl Robot {
         }
     }
 
-    pub fn rotate(&mut self, rotation: &Rotation) {
+    fn rotate(&mut self, rotation: &Rotation) {
         match rotation {
             Rotation::Left => self.direction -= 1.0,
             Rotation::Right => self.direction += 1.0,
