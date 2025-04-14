@@ -58,7 +58,7 @@ fn main() {
         wall.print();
     }
 
-    let mut ilse = Robot::new();
+    let mut ilse = Robot::new(1000.0, 500.0);
     let mut viewport = Viewport::new();
     ilse.run(&room, &mut viewport);
 }

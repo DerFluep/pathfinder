@@ -27,11 +27,11 @@ pub struct Robot {
 }
 
 impl Robot {
-    pub fn new() -> Self {
+    pub fn new(x: f32, y: f32) -> Self {
         Self {
             direction: 0.0,
             lidar: vec![0.0; 360],
-            position: Float2::new(2000.0, 1000.0),
+            position: Float2::new(x, y),
             radius: 175.0,
             sensor_collision: false,
             sensor_wall: false,
