@@ -81,11 +81,14 @@ impl Robot {
             let y1 = wall.get_a().get_y();
             let y2 = wall.get_b().get_y();
 
+            // check if the line is vertical
+            // vertical lines have no slope
             if x1 == x2 {
                 let distance = (pos_x - x1).abs();
                 if distance <= self.radius {
                     self.sensor_collision = true;
                 }
+                return;
             }
 
             let slope = (y2 - y1) / (x2 - x1);
@@ -97,6 +100,8 @@ impl Robot {
 
             let discriminant = b.powi(2) - 4.0 * a * c;
 
+            // discriminant == 0.0 -> one intersection point
+            // discriminant > 0.0 -> two intersection points
             if discriminant >= 0.0 {
                 self.sensor_collision = true;
             }
