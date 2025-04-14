@@ -71,6 +71,15 @@ impl Robot {
             });
     }
 
+    pub fn moving(&mut self, direction: &Direction) {
+        let vector = direction_to_vector(self.direction);
+        match direction {
+            Direction::Forward => self.position += vector * 5.0,
+            Direction::Backward => self.position -= vector * 5.0,
+            Direction::None => {}
+        }
+    }
+
     pub fn rotate(&mut self, rotation: &Rotation) {
         match rotation {
             Rotation::Left => self.direction -= 1.0,
