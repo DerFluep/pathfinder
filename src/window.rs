@@ -10,6 +10,8 @@ use sdl3::render::{Canvas, FPoint, FRect};
 use sdl3::video::Window;
 use sdl3::EventPump;
 
+const SCALE: f32 = 10.0;
+
 pub struct Viewport {
     canvas: Canvas<Window>,
     event_pump: EventPump,
@@ -64,8 +66,8 @@ impl Viewport {
         room.iter().for_each(|wall| {
             self.canvas
                 .draw_line(
-                    FPoint::new(wall.get_a().get_x() / 10.0, wall.get_a().get_y() / 10.0),
-                    FPoint::new(wall.get_b().get_x() / 10.0, wall.get_b().get_y() / 10.0),
+                    FPoint::new(wall.get_a().get_x() / 10.0, wall.get_a().get_y() / SCALE),
+                    FPoint::new(wall.get_b().get_x() / 10.0, wall.get_b().get_y() / SCALE),
                 )
                 .unwrap();
         });
@@ -73,10 +75,10 @@ impl Viewport {
         // Draw robot
         self.canvas
             .draw_rect(FRect::new(
-                (robot.get_position().get_x() - robot.get_radius()) / 10.0,
-                (robot.get_position().get_y() - robot.get_radius()) / 10.0,
-                robot.get_radius() * 2.0 / 10.0,
-                robot.get_radius() * 2.0 / 10.0,
+                (robot.get_position().get_x() - robot.get_radius()) / SCALE,
+                (robot.get_position().get_y() - robot.get_radius()) / SCALE,
+                robot.get_radius() * 2.0 / SCALE,
+                robot.get_radius() * 2.0 / SCALE,
             ))
             .unwrap();
         let vector = direction_to_vector(robot.get_direction());
@@ -84,10 +86,10 @@ impl Viewport {
         self.canvas
             .draw_line(
                 FPoint::new(
-                    robot.get_position().get_x() / 10.0,
-                    robot.get_position().get_y() / 10.0,
+                    robot.get_position().get_x() / SCALE,
+                    robot.get_position().get_y() / SCALE,
                 ),
-                FPoint::new(line_end.get_x() / 10.0, line_end.get_y() / 10.0),
+                FPoint::new(line_end.get_x() / SCALE, line_end.get_y() / SCALE),
             )
             .unwrap();
 
@@ -100,12 +102,12 @@ impl Viewport {
                 .enumerate()
                 .for_each(|(num, distance)| {
                     let vector = direction_to_vector(num as f32 + robot.get_direction());
-                    let colision_point = (vector * *distance + robot.get_position()) / 10.0;
+                    let colision_point = (vector * *distance + robot.get_position()) / SCALE;
                     self.canvas
                         .draw_line(
                             FPoint::new(
-                                robot.get_position().get_x() / 10.0,
-                                robot.get_position().get_y() / 10.0,
+                                robot.get_position().get_x() / SCALE,
+                                robot.get_position().get_y() / SCALE,
                             ),
                             FPoint::new(colision_point.get_x(), colision_point.get_y()),
                         )
