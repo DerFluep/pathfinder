@@ -4,8 +4,6 @@ mod robot;
 mod utils;
 mod window;
 
-use robot::{Direction, Rotation};
-use std::time::Duration;
 use window::Viewport;
 
 use crate::float2::Float2;
@@ -61,20 +59,6 @@ fn main() {
     }
 
     let mut ilse = Robot::new();
-
     let mut viewport = Viewport::new();
-    let mut direction = Direction::Forward;
-    let mut rotation = Rotation::None;
-    let mut quit = false;
-    'running: loop {
-        if quit {
-            break 'running;
-        }
-        ilse.lidar_scan(&room);
-        ilse.rotate(&rotation);
-        ilse.moving(&direction);
-        viewport.get_input(&mut direction, &mut rotation, &mut quit);
-        viewport.draw(&room, &ilse);
-        ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
-    }
+    ilse.run(&room, &mut viewport);
 }

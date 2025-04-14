@@ -1,6 +1,9 @@
 use crate::float2::Float2;
 use crate::line::Line;
 use crate::utils::{direction_to_vector, intersection_distance};
+use crate::window::Viewport;
+
+use std::time::Duration;
 
 pub enum Rotation {
     Left,
@@ -68,15 +71,6 @@ impl Robot {
             });
     }
 
-    pub fn moving(&mut self, direction: &Direction) {
-        let vector = direction_to_vector(self.direction);
-        match direction {
-            Direction::Forward => self.position += vector * 5.0,
-            Direction::Backward => self.position -= vector * 5.0,
-            Direction::None => {}
-        }
-    }
-
     pub fn rotate(&mut self, rotation: &Rotation) {
         match rotation {
             Rotation::Left => self.direction -= 1.0,
@@ -85,23 +79,27 @@ impl Robot {
         }
     }
 
-    pub fn run(&mut self, room: &Vec<Line>) {
+    pub fn run(&mut self, room: &Vec<Line>, viewport: &mut Viewport) {
         // rotate to nearest wall
-        let mut min_dist = f32::MAX;
-        let mut min_dist_dir = f32::MAX;
-        self.lidar_scan(room);
-        self.lidar.iter().enumerate().for_each(|(num, dist)| {
-            if *dist < min_dist {
-                min_dist = *dist;
-                min_dist_dir = num as f32;
+        'rotate: loop {
+            let mut min_dist = f32::MAX;
+            let mut min_dist_dir = f32::MAX;
+            self.lidar_scan(room);
+            self.lidar.iter().enumerate().for_each(|(num, dist)| {
+                if *dist < min_dist {
+                    min_dist = *dist;
+                    min_dist_dir = num as f32;
+                }
+            });
+            if min_dist_dir == 0.0 {
+                break 'rotate;
             }
-        });
-
-        if min_dist_dir != 0.0 {
             self.rotate(&Rotation::Left);
-        } else {
-            // move until colision
-            self.moving(&Direction::Forward);
+            if viewport.get_input() {
+                break;
+            };
+            viewport.draw(&room, &self);
+            ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
         }
     }
 }

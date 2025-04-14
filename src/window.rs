@@ -36,57 +36,23 @@ impl Viewport {
         }
     }
 
-    pub fn get_input(
-        &mut self,
-        direction: &mut Direction,
-        rotation: &mut Rotation,
-        quit: &mut bool,
-    ) {
+    pub fn get_input(&mut self) -> bool {
         for event in self.event_pump.poll_iter() {
             match event {
                 Event::Quit { .. }
                 | Event::KeyDown {
                     keycode: Some(Keycode::Escape),
                     ..
-                } => *quit = true,
-                Event::KeyDown {
-                    keycode: Some(Keycode::Left),
-                    repeat: false,
-                    ..
-                } => *rotation = Rotation::Left,
-                Event::KeyDown {
-                    keycode: Some(Keycode::Up),
-                    repeat: false,
-                    ..
-                } => *direction = Direction::Forward,
-                Event::KeyDown {
-                    keycode: Some(Keycode::Down),
-                    repeat: false,
-                    ..
-                } => *direction = Direction::Backward,
+                } => return true,
                 Event::KeyDown {
                     keycode: Some(Keycode::Space),
                     repeat: false,
                     ..
                 } => self.show_lidar = !self.show_lidar,
-                Event::KeyUp {
-                    keycode: Some(Keycode::Left),
-                    repeat: false,
-                    ..
-                } => *rotation = Rotation::None,
-                Event::KeyDown {
-                    keycode: Some(Keycode::Right),
-                    repeat: false,
-                    ..
-                } => *rotation = Rotation::Right,
-                Event::KeyUp {
-                    keycode: Some(Keycode::Right),
-                    repeat: false,
-                    ..
-                } => *rotation = Rotation::None,
                 _ => {}
             }
         }
+        false
     }
 
     pub fn draw(&mut self, room: &Vec<Line>, robot: &Robot) {
