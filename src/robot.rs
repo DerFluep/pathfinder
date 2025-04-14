@@ -68,6 +68,11 @@ impl Robot {
                     }
                 });
                 *distance = closest;
+                if *distance <= self.radius {
+                    self.sensor_collision = true;
+                } else {
+                    self.sensor_collision = false;
+                }
             });
     }
 
@@ -93,7 +98,7 @@ impl Robot {
         'rotate: loop {
             let mut min_dist = f32::MAX;
             let mut min_dist_dir = f32::MAX;
-            self.lidar_scan(room);
+            self.lidar_scan(&room);
             self.lidar.iter().enumerate().for_each(|(num, dist)| {
                 if *dist < min_dist {
                     min_dist = *dist;
