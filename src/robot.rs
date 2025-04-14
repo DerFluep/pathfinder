@@ -81,6 +81,13 @@ impl Robot {
             let y1 = wall.get_a().get_y();
             let y2 = wall.get_b().get_y();
 
+            if x1 == x2 {
+                let distance = (pos_x - x1).abs();
+                if distance <= self.radius {
+                    self.sensor_collision = true;
+                }
+            }
+
             let slope = (y2 - y1) / (x2 - x1);
             let y_intercept = y1 - slope * x1;
 
