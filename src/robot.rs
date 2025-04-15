@@ -4,7 +4,7 @@ use crate::utils::{direction_to_vector, intersection_distance};
 
 use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 pub enum Rotation {
     Left,
@@ -25,8 +25,12 @@ pub struct RobotState {
     pub radius: f32,
 }
 
+// speed = m/s
+// rotation_speed = degree/s
 pub struct Robot {
     state: Arc<Mutex<RobotState>>,
+    speed: f32,
+    rotation_speed: f32,
     sensor_collision: bool,
     sensor_wall: bool,
 }
@@ -41,6 +45,8 @@ impl Robot {
         };
         Self {
             state: Arc::new(Mutex::new(state)),
+            speed: 2.0,
+            rotation_speed: 10.0,
             sensor_collision: false,
             sensor_wall: false,
         }
@@ -109,22 +115,22 @@ impl Robot {
         });
     }
 
-    fn moving(&mut self, direction: &Direction) {
+    fn moving(&mut self, direction: &Direction, elapsed: &Duration) {
         let mut state = self.state.lock().unwrap();
         let vector = direction_to_vector(state.direction);
         match direction {
-            Direction::Forward => state.position += vector * 5.0,
-            Direction::Backward => state.position -= vector * 5.0,
+            Direction::Forward => state.position += vector * elapsed.as_secs_f32() * self.speed,
+            Direction::Backward => state.position -= vector * elapsed.as_secs_f32() * self.speed,
             Direction::None => {}
         }
         drop(state);
     }
 
-    fn rotate(&mut self, rotation: &Rotation) {
+    fn rotate(&mut self, rotation: &Rotation, elapsed: &Duration) {
         let mut state = self.state.lock().unwrap();
         match rotation {
-            Rotation::Left => state.direction -= 1.0,
-            Rotation::Right => state.direction += 1.0,
+            Rotation::Left => state.direction -= elapsed.as_secs_f32() * self.rotation_speed,
+            Rotation::Right => state.direction += elapsed.as_secs_f32() * self.rotation_speed,
             Rotation::None => {}
         }
         drop(state);
@@ -133,42 +139,52 @@ impl Robot {
     pub fn run(self, room: Arc<Vec<Line>>) -> JoinHandle<()> {
         let state = Arc::clone(&self.state);
         thread::spawn(move || {
+            let now = Instant::now();
+            let mut last_updated = now.elapsed();
             let mut robot = self;
             // rotate to nearest wall
             'rotate: loop {
-                let mut min_dist = f32::MAX;
-                let mut min_dist_dir = f32::MAX;
-                robot.lidar_scan(&room);
+                let elapsed = now.elapsed() - last_updated;
 
-                let state = state.lock().unwrap();
-                state.lidar.iter().enumerate().for_each(|(num, dist)| {
-                    if *dist < min_dist {
-                        min_dist = *dist;
-                        min_dist_dir = num as f32;
+                if elapsed.as_millis() >= 10 {
+                    last_updated = now.elapsed();
+                    let mut min_dist = f32::MAX;
+                    let mut min_dist_dir = f32::MAX;
+                    robot.lidar_scan(&room);
+
+                    let state = state.lock().unwrap();
+                    state.lidar.iter().enumerate().for_each(|(num, dist)| {
+                        if *dist < min_dist {
+                            min_dist = *dist;
+                            min_dist_dir = num as f32;
+                        }
+                    });
+                    drop(state);
+
+                    // 0.0 = robot forward direction
+                    if min_dist_dir == 0.0 {
+                        break 'rotate;
                     }
-                });
-                drop(state);
-
-                // 0.0 = robot forward direction
-                if min_dist_dir == 0.0 {
-                    break 'rotate;
+                    robot.rotate(&Rotation::Left, &elapsed);
                 }
-                robot.rotate(&Rotation::Left);
-                thread::sleep(Duration::from_millis(16));
             }
 
             'moving: loop {
-                robot.lidar_scan(&room);
-                robot.check_collision(&room);
-                if robot.sensor_collision {
-                    break 'moving;
+                let elapsed = now.elapsed() - last_updated;
+
+                if elapsed.as_millis() >= 10 {
+                    last_updated = now.elapsed();
+                    robot.lidar_scan(&room);
+                    robot.check_collision(&room);
+                    if robot.sensor_collision {
+                        break 'moving;
+                    }
+                    robot.moving(&Direction::Forward, &elapsed);
                 }
-                robot.moving(&Direction::Forward);
-                thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
             }
 
             loop {
-                thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
+                thread::sleep(Duration::from_millis(16));
             }
         })
     }
