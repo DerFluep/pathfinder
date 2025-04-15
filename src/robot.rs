@@ -139,15 +139,18 @@ impl Robot {
     pub fn run(self, room: Arc<Vec<Line>>) -> JoinHandle<()> {
         let state = Arc::clone(&self.state);
         thread::spawn(move || {
-            let now = Instant::now();
-            let mut last_updated = now.elapsed();
             let mut robot = self;
+
+            let mut last_updated = Instant::now();
+            let update_interval = Duration::from_millis(10);
+
             // rotate to nearest wall
             'rotate: loop {
-                let elapsed = now.elapsed() - last_updated;
+                let now = Instant::now();
+                let elapsed = now.duration_since(last_updated);
 
-                if elapsed.as_millis() >= 10 {
-                    last_updated = now.elapsed();
+                if elapsed >= update_interval {
+                    last_updated = now;
                     let mut min_dist = f32::MAX;
                     let mut min_dist_dir = f32::MAX;
                     robot.lidar_scan(&room);
@@ -167,13 +170,15 @@ impl Robot {
                     }
                     robot.rotate(&Rotation::Left, &elapsed);
                 }
+                thread::sleep(Duration::from_millis(1));
             }
 
             'moving: loop {
-                let elapsed = now.elapsed() - last_updated;
+                let now = Instant::now();
+                let elapsed = now.duration_since(last_updated);
 
-                if elapsed.as_millis() >= 10 {
-                    last_updated = now.elapsed();
+                if elapsed >= update_interval {
+                    last_updated = now;
                     robot.lidar_scan(&room);
                     robot.check_collision(&room);
                     if robot.sensor_collision {
@@ -181,6 +186,7 @@ impl Robot {
                     }
                     robot.moving(&Direction::Forward, &elapsed);
                 }
+                thread::sleep(Duration::from_millis(1));
             }
 
             loop {
