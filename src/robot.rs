@@ -175,8 +175,10 @@ impl Robot {
                         break 'rotate;
                     }
                     robot.rotate(&Rotation::Left, &elapsed);
+                } else {
+                    let sleep_duration = update_interval - elapsed;
+                    thread::sleep(sleep_duration);
                 }
-                thread::sleep(Duration::from_millis(1));
             }
 
             'moving: loop {
@@ -196,15 +198,17 @@ impl Robot {
                         break 'moving;
                     }
                     robot.moving(&Direction::Forward, &elapsed);
+                } else {
+                    let sleep_duration = update_interval - elapsed;
+                    thread::sleep(sleep_duration);
                 }
-                thread::sleep(Duration::from_millis(1));
             }
 
             loop {
                 if quit.load(Ordering::Relaxed) {
                     break;
                 }
-                thread::sleep(Duration::from_millis(16));
+                thread::sleep(Duration::from_millis(100));
             }
         })
     }

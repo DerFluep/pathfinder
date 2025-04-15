@@ -141,7 +141,9 @@ impl Viewport {
                         });
                 }
                 self.canvas.present();
-                thread::sleep(Duration::from_millis(1));
+            } else {
+                let sleep_duration = update_interval - elapsed;
+                thread::sleep(sleep_duration);
             }
         }
     }
