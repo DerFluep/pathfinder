@@ -1,7 +1,12 @@
 extern crate sdl3;
 
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex};
+use std::thread;
+use std::time::{Duration, Instant};
+
 use crate::line::Line;
-use crate::robot::{Direction, Robot, Rotation};
+use crate::robot::{Direction, Robot, RobotState, Rotation};
 use crate::utils::direction_to_vector;
 use sdl3::event::Event;
 use sdl3::keyboard::Keycode;
@@ -57,63 +62,87 @@ impl Viewport {
         false
     }
 
-    pub fn draw(&mut self, room: &Vec<Line>, robot: &Robot) {
-        self.canvas.set_draw_color(Color::RGB(0, 0, 0));
-        self.canvas.clear();
+    pub fn draw(
+        &mut self,
+        room: Arc<Vec<Line>>,
+        robot: &Arc<Mutex<RobotState>>,
+        quit: Arc<AtomicBool>,
+    ) {
+        let mut last_updated = Instant::now();
+        let update_interval = Duration::from_millis(16);
 
-        // Draw walls
-        self.canvas.set_draw_color(Color::RGB(255, 0, 0));
-        room.iter().for_each(|wall| {
-            self.canvas
-                .draw_line(
-                    FPoint::new(wall.get_a().get_x() / 10.0, wall.get_a().get_y() / SCALE),
-                    FPoint::new(wall.get_b().get_x() / 10.0, wall.get_b().get_y() / SCALE),
-                )
-                .unwrap();
-        });
+        'running: loop {
+            let now = Instant::now();
+            let elapsed = now.duration_since(last_updated);
 
-        // Draw robot
-        self.canvas
-            .draw_rect(FRect::new(
-                (robot.get_position().get_x() - robot.get_radius()) / SCALE,
-                (robot.get_position().get_y() - robot.get_radius()) / SCALE,
-                robot.get_radius() * 2.0 / SCALE,
-                robot.get_radius() * 2.0 / SCALE,
-            ))
-            .unwrap();
-        let vector = direction_to_vector(robot.get_direction());
-        let line_end = vector * robot.get_radius() + robot.get_position();
-        self.canvas
-            .draw_line(
-                FPoint::new(
-                    robot.get_position().get_x() / SCALE,
-                    robot.get_position().get_y() / SCALE,
-                ),
-                FPoint::new(line_end.get_x() / SCALE, line_end.get_y() / SCALE),
-            )
-            .unwrap();
+            if elapsed >= update_interval {
+                last_updated = now;
+                if self.get_input() {
+                    quit.store(true, Ordering::Relaxed);
+                    break 'running;
+                }
 
-        // Draw Lidar
-        if self.show_lidar {
-            self.canvas.set_draw_color(Color::RGB(0, 255, 0));
-            robot
-                .get_lidar()
-                .iter()
-                .enumerate()
-                .for_each(|(num, distance)| {
-                    let vector = direction_to_vector(num as f32 + robot.get_direction());
-                    let colision_point = (vector * *distance + robot.get_position()) / SCALE;
+                self.canvas.set_draw_color(Color::RGB(0, 0, 0));
+                self.canvas.clear();
+
+                // Draw walls
+                self.canvas.set_draw_color(Color::RGB(255, 0, 0));
+                room.iter().for_each(|wall| {
                     self.canvas
                         .draw_line(
-                            FPoint::new(
-                                robot.get_position().get_x() / SCALE,
-                                robot.get_position().get_y() / SCALE,
-                            ),
-                            FPoint::new(colision_point.get_x(), colision_point.get_y()),
+                            FPoint::new(wall.get_a().get_x() / 10.0, wall.get_a().get_y() / SCALE),
+                            FPoint::new(wall.get_b().get_x() / 10.0, wall.get_b().get_y() / SCALE),
                         )
-                        .unwrap()
+                        .unwrap();
                 });
+
+                // Draw robot
+                let robot_state = robot.lock().unwrap();
+                self.canvas
+                    .draw_rect(FRect::new(
+                        (robot_state.position.get_x() - robot_state.radius) / SCALE,
+                        (robot_state.position.get_y() - robot_state.radius) / SCALE,
+                        robot_state.radius * 2.0 / SCALE,
+                        robot_state.radius * 2.0 / SCALE,
+                    ))
+                    .unwrap();
+                let vector = direction_to_vector(robot_state.direction);
+                let line_end = vector * robot_state.radius + robot_state.position;
+                self.canvas
+                    .draw_line(
+                        FPoint::new(
+                            robot_state.position.get_x() / SCALE,
+                            robot_state.position.get_y() / SCALE,
+                        ),
+                        FPoint::new(line_end.get_x() / SCALE, line_end.get_y() / SCALE),
+                    )
+                    .unwrap();
+
+                // Draw Lidar
+                if self.show_lidar {
+                    self.canvas.set_draw_color(Color::RGB(0, 255, 0));
+                    robot_state
+                        .lidar
+                        .iter()
+                        .enumerate()
+                        .for_each(|(num, distance)| {
+                            let vector = direction_to_vector(num as f32 + robot_state.direction);
+                            let colision_point =
+                                (vector * *distance + robot_state.position) / SCALE;
+                            self.canvas
+                                .draw_line(
+                                    FPoint::new(
+                                        robot_state.position.get_x() / SCALE,
+                                        robot_state.position.get_y() / SCALE,
+                                    ),
+                                    FPoint::new(colision_point.get_x(), colision_point.get_y()),
+                                )
+                                .unwrap()
+                        });
+                }
+                self.canvas.present();
+                thread::sleep(Duration::from_millis(1));
+            }
         }
-        self.canvas.present();
     }
 }

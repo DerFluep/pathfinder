@@ -2,13 +2,14 @@ mod float2;
 mod line;
 mod robot;
 mod utils;
-// mod window;
+mod window;
 
+use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
 
-// use window::Viewport;
+use window::Viewport;
 
 use crate::float2::Float2;
 use crate::line::Line;
@@ -58,14 +59,16 @@ fn main() {
         Line::new(Float2::new(0.0, 0.0), Float2::new(0.0, 5000.0)),
     ]);
 
-    for wall in room.iter() {
-        wall.print();
-    }
+    let quit = Arc::new(AtomicBool::new(false));
+    let quit_drawing = quit.clone();
+    let quit_robot = quit.clone();
 
     let ilse = Robot::new(1000.0, 2500.0);
     let ilse_state = ilse.get_state();
-    // let mut viewport = Viewport::new();
-    let handle = ilse.run(room);
+    let handle = ilse.run(Arc::clone(&room), quit_robot);
+
+    let mut viewport = Viewport::new();
+    viewport.draw(Arc::clone(&room), &ilse_state, quit_drawing);
 
     handle.join().unwrap();
 }

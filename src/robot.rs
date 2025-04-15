@@ -2,6 +2,7 @@ use crate::float2::Float2;
 use crate::line::Line;
 use crate::utils::{direction_to_vector, intersection_distance};
 
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
 use std::time::{Duration, Instant};
@@ -45,8 +46,8 @@ impl Robot {
         };
         Self {
             state: Arc::new(Mutex::new(state)),
-            speed: 2.0,
-            rotation_speed: 10.0,
+            speed: 200.0,
+            rotation_speed: 30.0,
             sensor_collision: false,
             sensor_wall: false,
         }
@@ -136,7 +137,7 @@ impl Robot {
         drop(state);
     }
 
-    pub fn run(self, room: Arc<Vec<Line>>) -> JoinHandle<()> {
+    pub fn run(self, room: Arc<Vec<Line>>, quit: Arc<AtomicBool>) -> JoinHandle<()> {
         let state = Arc::clone(&self.state);
         thread::spawn(move || {
             let mut robot = self;
@@ -151,6 +152,11 @@ impl Robot {
 
                 if elapsed >= update_interval {
                     last_updated = now;
+
+                    if quit.load(Ordering::Relaxed) {
+                        break 'rotate;
+                    }
+
                     let mut min_dist = f32::MAX;
                     let mut min_dist_dir = f32::MAX;
                     robot.lidar_scan(&room);
@@ -179,6 +185,11 @@ impl Robot {
 
                 if elapsed >= update_interval {
                     last_updated = now;
+
+                    if quit.load(Ordering::Relaxed) {
+                        break 'moving;
+                    }
+
                     robot.lidar_scan(&room);
                     robot.check_collision(&room);
                     if robot.sensor_collision {
@@ -190,6 +201,9 @@ impl Robot {
             }
 
             loop {
+                if quit.load(Ordering::Relaxed) {
+                    break;
+                }
                 thread::sleep(Duration::from_millis(16));
             }
         })
