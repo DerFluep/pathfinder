@@ -19,10 +19,10 @@ pub enum Direction {
 }
 
 pub struct RobotState {
-    direction: f32,
-    lidar: Vec<f32>,
-    position: Float2,
-    radius: f32,
+    pub direction: f32,
+    pub lidar: Vec<f32>,
+    pub position: Float2,
+    pub radius: f32,
 }
 
 pub struct Robot {
@@ -117,6 +117,7 @@ impl Robot {
             Direction::Backward => state.position -= vector * 5.0,
             Direction::None => {}
         }
+        drop(state);
     }
 
     fn rotate(&mut self, rotation: &Rotation) {
@@ -126,11 +127,11 @@ impl Robot {
             Rotation::Right => state.direction += 1.0,
             Rotation::None => {}
         }
+        drop(state);
     }
 
     pub fn run(self, room: Arc<Vec<Line>>) -> JoinHandle<()> {
         let state = Arc::clone(&self.state);
-        let sensor_collision = self.sensor_collision;
         thread::spawn(move || {
             let mut robot = self;
             // rotate to nearest wall
@@ -138,6 +139,7 @@ impl Robot {
                 let mut min_dist = f32::MAX;
                 let mut min_dist_dir = f32::MAX;
                 robot.lidar_scan(&room);
+
                 let state = state.lock().unwrap();
                 state.lidar.iter().enumerate().for_each(|(num, dist)| {
                     if *dist < min_dist {
@@ -145,26 +147,28 @@ impl Robot {
                         min_dist_dir = num as f32;
                     }
                 });
+                drop(state);
+
                 // 0.0 = robot forward direction
                 if min_dist_dir == 0.0 {
                     break 'rotate;
                 }
                 robot.rotate(&Rotation::Left);
-                ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
+                thread::sleep(Duration::from_millis(16));
             }
 
             'moving: loop {
                 robot.lidar_scan(&room);
                 robot.check_collision(&room);
-                if sensor_collision {
+                if robot.sensor_collision {
                     break 'moving;
                 }
                 robot.moving(&Direction::Forward);
-                ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
+                thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
             }
 
             loop {
-                ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
+                thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
             }
         })
     }
