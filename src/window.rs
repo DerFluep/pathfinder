@@ -6,7 +6,7 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use crate::line::Line;
-use crate::robot::{Direction, Robot, RobotState, Rotation};
+use crate::robot::RobotState;
 use crate::utils::direction_to_vector;
 use sdl3::event::Event;
 use sdl3::keyboard::Keycode;

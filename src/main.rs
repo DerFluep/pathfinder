@@ -6,8 +6,6 @@ mod window;
 
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
-use std::thread;
-use std::time::Duration;
 
 use window::Viewport;
 
@@ -18,7 +16,8 @@ use crate::robot::Robot;
 // X goes to the right
 // Y goes down
 
-fn bounding_box(room: &Vec<Line>) {
+// TODO update to use new Arc<Mutex<>> room
+/* fn bounding_box(room: &Vec<Line>) {
     let (mut min_x, mut min_y) = (f32::MAX, f32::MAX);
     let (mut max_x, mut max_y) = (0.0, 0.0);
     let mut arr_x = Vec::new();
@@ -49,7 +48,7 @@ fn bounding_box(room: &Vec<Line>) {
 
     println!("min x: {} y: {}", min_x, min_y);
     println!("max x: {} y: {}", max_x, max_y);
-}
+} */
 
 fn main() {
     let room = Arc::new(vec![
