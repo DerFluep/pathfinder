@@ -2,9 +2,11 @@ mod float2;
 mod line;
 mod robot;
 mod utils;
-mod window;
+// mod window;
 
-use window::Viewport;
+use std::sync::Arc;
+
+// use window::Viewport;
 
 use crate::float2::Float2;
 use crate::line::Line;
@@ -47,18 +49,20 @@ fn bounding_box(room: &Vec<Line>) {
 }
 
 fn main() {
-    let room = vec![
+    let room = Arc::new(vec![
         Line::new(Float2::new(0.0, 0.0), Float2::new(5000.0, 0.0)),
         Line::new(Float2::new(5000.0, 0.0), Float2::new(5000.0, 5000.0)),
         Line::new(Float2::new(0.0, 5000.0), Float2::new(5000.0, 5000.0)),
         Line::new(Float2::new(0.0, 0.0), Float2::new(0.0, 5000.0)),
-    ];
+    ]);
 
     for wall in room.iter() {
         wall.print();
     }
 
     let mut ilse = Robot::new(1000.0, 500.0);
-    let mut viewport = Viewport::new();
-    ilse.run(&room, &mut viewport);
+    let ilse_state = ilse.get_state();
+    // let mut viewport = Viewport::new();
+    let handle = ilse.run(room);
+    handle.join().unwrap();
 }

@@ -1,8 +1,9 @@
 use crate::float2::Float2;
 use crate::line::Line;
 use crate::utils::{direction_to_vector, intersection_distance};
-use crate::window::Viewport;
 
+use std::sync::{Arc, Mutex};
+use std::thread::{self, JoinHandle};
 use std::time::Duration;
 
 pub enum Rotation {
@@ -17,52 +18,51 @@ pub enum Direction {
     None,
 }
 
-pub struct Robot {
+pub struct RobotState {
     direction: f32,
     lidar: Vec<f32>,
     position: Float2,
     radius: f32,
+}
+
+pub struct Robot {
+    state: Arc<Mutex<RobotState>>,
     sensor_collision: bool,
     sensor_wall: bool,
 }
 
 impl Robot {
     pub fn new(x: f32, y: f32) -> Self {
-        Self {
+        let state = RobotState {
             direction: 0.0,
             lidar: vec![0.0; 360],
             position: Float2::new(x, y),
             radius: 175.0,
+        };
+        Self {
+            state: Arc::new(Mutex::new(state)),
             sensor_collision: false,
             sensor_wall: false,
         }
     }
 
-    pub fn get_position(&self) -> Float2 {
-        self.position
+    pub fn get_state(&self) -> Arc<Mutex<RobotState>> {
+        Arc::clone(&self.state)
     }
 
-    pub fn get_radius(&self) -> f32 {
-        self.radius
-    }
-
-    pub fn get_direction(&self) -> f32 {
-        self.direction
-    }
-
-    pub fn get_lidar(&self) -> Vec<f32> {
-        self.lidar.clone()
-    }
-
-    fn lidar_scan(&mut self, room: &Vec<Line>) {
-        self.lidar
+    fn lidar_scan(&mut self, room: &Arc<Vec<Line>>) {
+        let mut state = self.state.lock().unwrap();
+        let direction = state.direction;
+        let position = state.position;
+        state
+            .lidar
             .iter_mut()
             .enumerate()
             .for_each(|(num, distance)| {
-                let ray = direction_to_vector(num as f32 + self.direction);
-                let mut closest = f32::MAX;
+                let ray = direction_to_vector(num as f32 + direction);
+                let mut closest = 10000.0;
                 room.iter().for_each(|wall| {
-                    let distance = intersection_distance(self.position, ray, *wall);
+                    let distance = intersection_distance(position, ray, *wall);
                     if distance < closest {
                         closest = distance;
                     }
@@ -71,10 +71,11 @@ impl Robot {
             });
     }
 
-    fn check_collision(&mut self, room: &Vec<Line>) {
+    fn check_collision(&mut self, room: &Arc<Vec<Line>>) {
+        let state = self.state.lock().unwrap();
         self.sensor_collision = false;
-        let pos_x = self.position.get_x();
-        let pos_y = self.position.get_y();
+        let pos_x = state.position.get_x();
+        let pos_y = state.position.get_y();
         room.iter().for_each(|wall| {
             let x1 = wall.get_a().get_x();
             let x2 = wall.get_b().get_x();
@@ -85,7 +86,7 @@ impl Robot {
             // vertical lines have no slope
             if x1 == x2 {
                 let distance = (pos_x - x1).abs();
-                if distance <= self.radius {
+                if distance <= state.radius {
                     self.sensor_collision = true;
                 }
                 return;
@@ -96,7 +97,7 @@ impl Robot {
 
             let a = 1.0 + slope.powi(2);
             let b = 2.0 * slope * (y_intercept - pos_y) - 2.0 * pos_x;
-            let c = pos_x.powi(2) + (y_intercept - pos_y).powi(2) - self.radius.powi(2);
+            let c = pos_x.powi(2) + (y_intercept - pos_y).powi(2) - state.radius.powi(2);
 
             let discriminant = b.powi(2) - 4.0 * a * c;
 
@@ -109,66 +110,62 @@ impl Robot {
     }
 
     fn moving(&mut self, direction: &Direction) {
-        let vector = direction_to_vector(self.direction);
+        let mut state = self.state.lock().unwrap();
+        let vector = direction_to_vector(state.direction);
         match direction {
-            Direction::Forward => self.position += vector * 5.0,
-            Direction::Backward => self.position -= vector * 5.0,
+            Direction::Forward => state.position += vector * 5.0,
+            Direction::Backward => state.position -= vector * 5.0,
             Direction::None => {}
         }
     }
 
     fn rotate(&mut self, rotation: &Rotation) {
+        let mut state = self.state.lock().unwrap();
         match rotation {
-            Rotation::Left => self.direction -= 1.0,
-            Rotation::Right => self.direction += 1.0,
+            Rotation::Left => state.direction -= 1.0,
+            Rotation::Right => state.direction += 1.0,
             Rotation::None => {}
         }
     }
 
-    pub fn run(&mut self, room: &Vec<Line>, viewport: &mut Viewport) {
-        // rotate to nearest wall
-        'rotate: loop {
-            if viewport.get_input() {
-                break 'rotate;
-            };
-            let mut min_dist = f32::MAX;
-            let mut min_dist_dir = f32::MAX;
-            self.lidar_scan(&room);
-            self.lidar.iter().enumerate().for_each(|(num, dist)| {
-                if *dist < min_dist {
-                    min_dist = *dist;
-                    min_dist_dir = num as f32;
+    pub fn run(self, room: Arc<Vec<Line>>) -> JoinHandle<()> {
+        let state = Arc::clone(&self.state);
+        let sensor_collision = self.sensor_collision;
+        thread::spawn(move || {
+            let mut robot = self;
+            // rotate to nearest wall
+            'rotate: loop {
+                let mut min_dist = f32::MAX;
+                let mut min_dist_dir = f32::MAX;
+                robot.lidar_scan(&room);
+                let state = state.lock().unwrap();
+                state.lidar.iter().enumerate().for_each(|(num, dist)| {
+                    if *dist < min_dist {
+                        min_dist = *dist;
+                        min_dist_dir = num as f32;
+                    }
+                });
+                // 0.0 = robot forward direction
+                if min_dist_dir == 0.0 {
+                    break 'rotate;
                 }
-            });
-            // 0.0 = robot forward direction
-            if min_dist_dir == 0.0 {
-                break 'rotate;
+                robot.rotate(&Rotation::Left);
+                ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
             }
-            self.rotate(&Rotation::Left);
-            viewport.draw(&room, &self);
-            ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
-        }
 
-        'moving: loop {
-            if viewport.get_input() {
-                break 'moving;
-            };
-            self.lidar_scan(&room);
-            self.check_collision(&room);
-            if self.sensor_collision {
-                break 'moving;
+            'moving: loop {
+                robot.lidar_scan(&room);
+                robot.check_collision(&room);
+                if sensor_collision {
+                    break 'moving;
+                }
+                robot.moving(&Direction::Forward);
+                ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
             }
-            self.moving(&Direction::Forward);
-            viewport.draw(&room, &self);
-            ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
-        }
 
-        'endloop: loop {
-            if viewport.get_input() {
-                break 'endloop;
+            loop {
+                ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
             }
-            viewport.draw(&room, &self);
-            ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
-        }
+        })
     }
 }
