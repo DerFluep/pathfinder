@@ -137,72 +137,75 @@ impl Robot {
         drop(state);
     }
 
+    fn goto_next_wall(&mut self, room: Arc<Vec<Line>>, quit: Arc<AtomicBool>) {
+        let mut last_updated = Instant::now();
+        let update_interval = Duration::from_millis(10);
+
+        // rotate to nearest wall
+        'rotate: loop {
+            let now = Instant::now();
+            let elapsed = now.duration_since(last_updated);
+
+            if elapsed >= update_interval {
+                last_updated = now;
+
+                if quit.load(Ordering::Relaxed) {
+                    break 'rotate;
+                }
+
+                let mut min_dist = f32::MAX;
+                let mut min_dist_dir = f32::MAX;
+                self.lidar_scan(&room);
+
+                let state = self.state.lock().unwrap();
+                state.lidar.iter().enumerate().for_each(|(num, dist)| {
+                    if *dist < min_dist {
+                        min_dist = *dist;
+                        min_dist_dir = num as f32;
+                    }
+                });
+                drop(state);
+
+                // 0.0 = robot forward direction
+                if min_dist_dir == 0.0 {
+                    break 'rotate;
+                }
+                self.rotate(&Rotation::Left, &elapsed);
+            } else {
+                let sleep_duration = update_interval - elapsed;
+                thread::sleep(sleep_duration);
+            }
+        }
+
+        'moving: loop {
+            let now = Instant::now();
+            let elapsed = now.duration_since(last_updated);
+
+            if elapsed >= update_interval {
+                last_updated = now;
+
+                if quit.load(Ordering::Relaxed) {
+                    break 'moving;
+                }
+
+                self.lidar_scan(&room);
+                self.check_collision(&room);
+                if self.sensor_collision {
+                    break 'moving;
+                }
+                self.moving(&Direction::Forward, &elapsed);
+            } else {
+                let sleep_duration = update_interval - elapsed;
+                thread::sleep(sleep_duration);
+            }
+        }
+    }
+
     pub fn run(self, room: Arc<Vec<Line>>, quit: Arc<AtomicBool>) -> JoinHandle<()> {
-        let state = Arc::clone(&self.state);
         thread::spawn(move || {
             let mut robot = self;
 
-            let mut last_updated = Instant::now();
-            let update_interval = Duration::from_millis(10);
-
-            // rotate to nearest wall
-            'rotate: loop {
-                let now = Instant::now();
-                let elapsed = now.duration_since(last_updated);
-
-                if elapsed >= update_interval {
-                    last_updated = now;
-
-                    if quit.load(Ordering::Relaxed) {
-                        break 'rotate;
-                    }
-
-                    let mut min_dist = f32::MAX;
-                    let mut min_dist_dir = f32::MAX;
-                    robot.lidar_scan(&room);
-
-                    let state = state.lock().unwrap();
-                    state.lidar.iter().enumerate().for_each(|(num, dist)| {
-                        if *dist < min_dist {
-                            min_dist = *dist;
-                            min_dist_dir = num as f32;
-                        }
-                    });
-                    drop(state);
-
-                    // 0.0 = robot forward direction
-                    if min_dist_dir == 0.0 {
-                        break 'rotate;
-                    }
-                    robot.rotate(&Rotation::Left, &elapsed);
-                } else {
-                    let sleep_duration = update_interval - elapsed;
-                    thread::sleep(sleep_duration);
-                }
-            }
-
-            'moving: loop {
-                let now = Instant::now();
-                let elapsed = now.duration_since(last_updated);
-
-                if elapsed >= update_interval {
-                    last_updated = now;
-
-                    if quit.load(Ordering::Relaxed) {
-                        break 'moving;
-                    }
-
-                    robot.lidar_scan(&room);
-                    robot.check_collision(&room);
-                    if robot.sensor_collision {
-                        break 'moving;
-                    }
-                    robot.moving(&Direction::Forward, &elapsed);
-                } else {
-                    let sleep_duration = update_interval - elapsed;
-                    thread::sleep(sleep_duration);
-                }
-            }
+            robot.goto_next_wall(room, Arc::clone(&quit));
 
             loop {
                 if quit.load(Ordering::Relaxed) {
