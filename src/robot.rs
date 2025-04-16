@@ -116,6 +116,20 @@ impl Robot {
         });
     }
 
+    fn check_wall(&mut self, room: &Arc<Vec<Line>>) {
+        self.sensor_wall = false;
+        room.iter().for_each(|wall| {
+            let state = self.state.lock().unwrap();
+            let ray1 = direction_to_vector(state.direction + 92.0);
+            let ray2 = direction_to_vector(state.direction + 88.0);
+            let distance1 = intersection_distance(state.position, ray1, *wall);
+            let distance2 = intersection_distance(state.position, ray2, *wall);
+            if distance1 <= state.radius + 2.0 && distance1 < distance2 {
+                self.sensor_wall = true;
+            }
+        });
+    }
+
     fn moving(&mut self, direction: &Direction, elapsed: &Duration) {
         let mut state = self.state.lock().unwrap();
         let vector = direction_to_vector(state.direction);
