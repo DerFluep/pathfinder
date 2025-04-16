@@ -59,15 +59,13 @@ fn main() {
     ]);
 
     let quit = Arc::new(AtomicBool::new(false));
-    let quit_drawing = quit.clone();
-    let quit_robot = quit.clone();
 
     let ilse = Robot::new(1000.0, 2500.0);
     let ilse_state = ilse.get_state();
-    let handle = ilse.run(Arc::clone(&room), quit_robot);
+    let handle = ilse.run(Arc::clone(&room), Arc::clone(&quit));
 
     let mut viewport = Viewport::new();
-    viewport.draw(Arc::clone(&room), &ilse_state, quit_drawing);
+    viewport.draw(Arc::clone(&room), &ilse_state, Arc::clone(&quit));
 
     handle.join().unwrap();
 }
