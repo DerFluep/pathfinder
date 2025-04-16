@@ -141,7 +141,7 @@ impl Robot {
         drop(state);
     }
 
-    fn rotate(&mut self, rotation: &Rotation, elapsed: &Duration) {
+    fn rotate(&mut self, rotation: Rotation, elapsed: &Duration) {
         let mut state = self.state.lock().unwrap();
         match rotation {
             Rotation::Left => state.direction -= elapsed.as_secs_f32() * self.rotation_speed,
@@ -151,7 +151,7 @@ impl Robot {
         drop(state);
     }
 
-    fn goto_next_wall(&mut self, room: Arc<Vec<Line>>, quit: Arc<AtomicBool>) {
+    fn goto_next_wall(&mut self, room: &Arc<Vec<Line>>, quit: Arc<AtomicBool>) {
         let mut last_updated = Instant::now();
         let update_interval = Duration::from_millis(10);
 
@@ -184,7 +184,7 @@ impl Robot {
                 if min_dist_dir == 0.0 {
                     break 'rotate;
                 }
-                self.rotate(&Rotation::Left, &elapsed);
+                self.rotate(Rotation::Left, &elapsed);
             } else {
                 let sleep_duration = update_interval - elapsed;
                 thread::sleep(sleep_duration);
@@ -219,7 +219,31 @@ impl Robot {
         thread::spawn(move || {
             let mut robot = self;
 
-            robot.goto_next_wall(room, Arc::clone(&quit));
+            robot.goto_next_wall(&room, Arc::clone(&quit));
+
+            let mut last_updated = Instant::now();
+            let update_interval = Duration::from_millis(10);
+            'rotating: loop {
+                let now = Instant::now();
+                let elapsed = now.duration_since(last_updated);
+
+                if elapsed >= update_interval {
+                    last_updated = now;
+
+                    if quit.load(Ordering::Relaxed) {
+                        break 'rotating;
+                    }
+
+                    robot.check_wall(&room);
+                    if robot.sensor_wall {
+                        break 'rotating;
+                    }
+                    robot.rotate(Rotation::Left, &elapsed);
+                } else {
+                    let sleep_duration = update_interval - elapsed;
+                    thread::sleep(sleep_duration);
+                }
+            }
 
             loop {
                 if quit.load(Ordering::Relaxed) {
