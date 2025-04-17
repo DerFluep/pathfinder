@@ -85,7 +85,10 @@ impl Robot {
         self.sensor_collision = false;
         let pos_x = state.position.get_x();
         let pos_y = state.position.get_y();
-        room.iter().for_each(|wall| {
+        let radius = state.radius;
+        drop(state);
+
+        for wall in room.iter() {
             let x1 = wall.get_a().get_x();
             let x2 = wall.get_b().get_x();
             let y1 = wall.get_a().get_y();
@@ -95,10 +98,10 @@ impl Robot {
             // vertical lines have no slope
             if x1 == x2 {
                 let distance = (pos_x - x1).abs();
-                if distance <= state.radius {
+                if distance <= radius {
                     self.sensor_collision = true;
+                    break;
                 }
-                return;
             }
 
             let slope = (y2 - y1) / (x2 - x1);
@@ -106,7 +109,7 @@ impl Robot {
 
             let a = 1.0 + slope.powi(2);
             let b = 2.0 * slope * (y_intercept - pos_y) - 2.0 * pos_x;
-            let c = pos_x.powi(2) + (y_intercept - pos_y).powi(2) - state.radius.powi(2);
+            let c = pos_x.powi(2) + (y_intercept - pos_y).powi(2) - radius.powi(2);
 
             let discriminant = b.powi(2) - 4.0 * a * c;
 
@@ -114,8 +117,9 @@ impl Robot {
             // discriminant > 0.0 -> two intersection points
             if discriminant >= 0.0 {
                 self.sensor_collision = true;
+                break;
             }
-        });
+        }
     }
 
     fn check_wall(&mut self, room: &Arc<Vec<Line>>) {
