@@ -5,6 +5,7 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
 
+use crate::float2::Float2;
 use crate::line::Line;
 use crate::robot::RobotState;
 use crate::utils::direction_to_vector;
@@ -16,6 +17,58 @@ use sdl3::video::Window;
 use sdl3::EventPump;
 
 const SCALE: f32 = 10.0;
+
+fn draw_circle(render: &mut Canvas<Window>, position: Float2, radius: f32) {
+    let diameter = radius * 2.0 / SCALE;
+
+    let pos_x = position.get_x() / SCALE;
+    let pos_y = position.get_y() / SCALE;
+    let mut x = radius / SCALE - 1.0;
+    let mut y = 0.0;
+    let mut tx = 1.0;
+    let mut ty = 1.0;
+    let mut error = tx - diameter;
+
+    render.set_draw_color(Color::RGB(255, 0, 0));
+    while x >= y {
+        render
+            .draw_point(FPoint::new(pos_x + x, pos_y - y))
+            .unwrap();
+        render
+            .draw_point(FPoint::new(pos_x + x, pos_y + y))
+            .unwrap();
+        render
+            .draw_point(FPoint::new(pos_x - x, pos_y - y))
+            .unwrap();
+        render
+            .draw_point(FPoint::new(pos_x - x, pos_y + y))
+            .unwrap();
+        render
+            .draw_point(FPoint::new(pos_x + y, pos_y - x))
+            .unwrap();
+        render
+            .draw_point(FPoint::new(pos_x + y, pos_y + x))
+            .unwrap();
+        render
+            .draw_point(FPoint::new(pos_x - y, pos_y - x))
+            .unwrap();
+        render
+            .draw_point(FPoint::new(pos_x - y, pos_y + x))
+            .unwrap();
+
+        if error <= 0.0 {
+            y += 1.0;
+            error += ty;
+            ty += 2.0;
+        }
+
+        if error > 0.0 {
+            x -= 1.0;
+            tx += 2.0;
+            error += tx - diameter;
+        }
+    }
+}
 
 pub struct Viewport {
     canvas: Canvas<Window>,
@@ -98,14 +151,7 @@ impl Viewport {
 
                 // Draw robot
                 let robot_state = robot.lock().unwrap();
-                self.canvas
-                    .draw_rect(FRect::new(
-                        (robot_state.position.get_x() - robot_state.radius) / SCALE,
-                        (robot_state.position.get_y() - robot_state.radius) / SCALE,
-                        robot_state.radius * 2.0 / SCALE,
-                        robot_state.radius * 2.0 / SCALE,
-                    ))
-                    .unwrap();
+                draw_circle(&mut self.canvas, robot_state.position, robot_state.radius);
                 let vector = direction_to_vector(robot_state.direction);
                 let line_end = vector * robot_state.radius + robot_state.position;
                 self.canvas
