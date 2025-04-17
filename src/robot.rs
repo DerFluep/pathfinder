@@ -1,3 +1,5 @@
+use sdl3::libc::__WALL;
+
 use crate::float2::Float2;
 use crate::line::Line;
 use crate::utils::{direction_to_vector, intersection_distance};
@@ -118,7 +120,7 @@ impl Robot {
 
     fn check_wall(&mut self, room: &Arc<Vec<Line>>) {
         self.sensor_wall = false;
-        room.iter().for_each(|wall| {
+        for wall in room.iter() {
             let state = self.state.lock().unwrap();
             let ray1 = direction_to_vector(state.direction + 92.0);
             let ray2 = direction_to_vector(state.direction + 88.0);
@@ -126,8 +128,9 @@ impl Robot {
             let distance2 = intersection_distance(state.position, ray2, *wall);
             if distance1 <= state.radius + 2.0 && distance1 < distance2 {
                 self.sensor_wall = true;
+                break;
             }
-        });
+        }
     }
 
     fn moving(&mut self, direction: &Direction, elapsed: &Duration) {
