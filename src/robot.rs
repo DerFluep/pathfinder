@@ -158,7 +158,7 @@ impl Robot {
         drop(state);
     }
 
-    fn goto_next_wall(&mut self, room: &Arc<Vec<Line>>, quit: Arc<AtomicBool>) {
+    fn goto_nearest_wall(&mut self, room: &Arc<Vec<Line>>, quit: Arc<AtomicBool>) {
         let mut last_updated = Instant::now();
         let update_interval = Duration::from_millis(10);
 
@@ -226,7 +226,7 @@ impl Robot {
         thread::spawn(move || {
             let mut robot = self;
 
-            robot.goto_next_wall(&room, Arc::clone(&quit));
+            robot.goto_nearest_wall(&room, Arc::clone(&quit));
 
             let mut last_updated = Instant::now();
             let update_interval = Duration::from_millis(10);
