@@ -1,5 +1,3 @@
-use sdl3::libc::__WALL;
-
 use crate::float2::Float2;
 use crate::line::Line;
 use crate::utils::{direction_to_vector, intersection_distance};
@@ -126,8 +124,8 @@ impl Robot {
         self.sensor_wall = false;
         for wall in room.iter() {
             let state = self.state.lock().unwrap();
-            let ray1 = direction_to_vector(state.direction + 92.0);
-            let ray2 = direction_to_vector(state.direction + 88.0);
+            let ray1 = direction_to_vector(state.direction + 272.0);
+            let ray2 = direction_to_vector(state.direction + 268.0);
             let distance1 = intersection_distance(state.position, ray1, *wall);
             let distance2 = intersection_distance(state.position, ray2, *wall);
             if distance1 <= state.radius + 2.0 && distance1 < distance2 {
@@ -151,8 +149,8 @@ impl Robot {
     fn rotate(&mut self, rotation: Rotation, elapsed: &Duration) {
         let mut state = self.state.lock().unwrap();
         match rotation {
-            Rotation::Left => state.direction -= elapsed.as_secs_f32() * self.rotation_speed,
-            Rotation::Right => state.direction += elapsed.as_secs_f32() * self.rotation_speed,
+            Rotation::Left => state.direction += elapsed.as_secs_f32() * self.rotation_speed,
+            Rotation::Right => state.direction -= elapsed.as_secs_f32() * self.rotation_speed,
             Rotation::None => {}
         }
         drop(state);
@@ -175,23 +173,27 @@ impl Robot {
                 }
 
                 let mut min_dist = f32::MAX;
-                let mut min_dist_dir = f32::MAX;
+                let mut min_dist_dir = usize::MAX;
                 self.lidar_scan(&room);
 
                 let state = self.state.lock().unwrap();
                 state.lidar.iter().enumerate().for_each(|(num, dist)| {
                     if *dist < min_dist {
                         min_dist = *dist;
-                        min_dist_dir = num as f32;
+                        min_dist_dir = num;
                     }
                 });
                 drop(state);
 
                 // 0.0 = robot forward direction
-                if min_dist_dir == 0.0 {
+                if min_dist_dir == 0 {
                     break 'rotate;
                 }
-                self.rotate(Rotation::Left, &elapsed);
+                if min_dist_dir <= 180 {
+                    self.rotate(Rotation::Left, &elapsed);
+                } else {
+                    self.rotate(Rotation::Right, &elapsed);
+                }
             } else {
                 let sleep_duration = update_interval - elapsed;
                 thread::sleep(sleep_duration);
