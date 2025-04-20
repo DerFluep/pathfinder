@@ -243,6 +243,7 @@ impl Robot {
                         break 'rotating;
                     }
 
+                    robot.lidar_scan(&room);
                     robot.check_wall(&room);
                     if robot.sensor_wall {
                         break 'rotating;
