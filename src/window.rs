@@ -184,7 +184,7 @@ impl Viewport {
                         .enumerate()
                         .for_each(|(num, distance)| {
                             let vector = direction_to_vector(num as f32 + robot_state.direction);
-                            let colision_point = (vector * *distance + robot_state.position);
+                            let colision_point = vector * *distance + robot_state.position;
                             self.canvas
                                 .draw_line(
                                     FPoint::new(

@@ -124,18 +124,18 @@ impl Robot {
         self.sensor_wall = false;
         for wall in room.iter() {
             let state = self.state.lock().unwrap();
-            let ray1 = direction_to_vector(state.direction + 272.0);
-            let ray2 = direction_to_vector(state.direction + 268.0);
+            let ray1 = direction_to_vector(state.direction + 268.0);
+            let ray2 = direction_to_vector(state.direction + 272.0);
             let distance1 = intersection_distance(state.position, ray1, *wall);
             let distance2 = intersection_distance(state.position, ray2, *wall);
-            if distance1 <= state.radius + 2.0 && distance1 < distance2 {
+            if distance1 <= state.radius + 2.0 && distance1 <= distance2 {
                 self.sensor_wall = true;
                 break;
             }
         }
     }
 
-    fn moving(&mut self, direction: &Direction, elapsed: &Duration) {
+    fn moving(&mut self, direction: Direction, elapsed: &Duration) {
         let mut state = self.state.lock().unwrap();
         let vector = direction_to_vector(state.direction);
         match direction {
@@ -216,7 +216,7 @@ impl Robot {
                 if self.sensor_collision {
                     break 'moving;
                 }
-                self.moving(&Direction::Forward, &elapsed);
+                self.moving(Direction::Forward, &elapsed);
             } else {
                 let sleep_duration = update_interval - elapsed;
                 thread::sleep(sleep_duration);
@@ -249,6 +249,36 @@ impl Robot {
                         break 'rotating;
                     }
                     robot.rotate(Rotation::Left, &elapsed);
+                } else {
+                    let sleep_duration = update_interval - elapsed;
+                    thread::sleep(sleep_duration);
+                }
+            }
+
+            'wallfollow: loop {
+                let now = Instant::now();
+                let elapsed = now.duration_since(last_updated);
+
+                if elapsed >= update_interval {
+                    last_updated = now;
+
+                    if quit.load(Ordering::Relaxed) {
+                        break 'wallfollow;
+                    }
+
+                    let mut rotation = Rotation::None;
+                    robot.check_wall(&room);
+                    if !robot.sensor_wall {
+                        rotation = Rotation::Right;
+                    }
+
+                    robot.check_collision(&room);
+                    if robot.sensor_collision {
+                        rotation = Rotation::Left;
+                    }
+
+                    robot.rotate(rotation, &elapsed);
+                    robot.moving(Direction::Forward, &elapsed);
                 } else {
                     let sleep_duration = update_interval - elapsed;
                     thread::sleep(sleep_duration);
