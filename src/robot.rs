@@ -206,6 +206,10 @@ impl Robot {
             }
         }
 
+        // TODO convert the counter so time units instead of counting time steps
+        // TODO convert backward movement from time to distance
+        let mut is_backwards = false;
+        let mut back_counter = 0;
         'moving: loop {
             let now = Instant::now();
             let elapsed = now.duration_since(last_updated);
@@ -219,10 +223,20 @@ impl Robot {
 
                 self.lidar_scan(&room);
                 self.check_collision(&room);
+                let mut direction = Direction::Forward;
                 if self.sensor_collision {
+                    direction = Direction::Backward;
+                    is_backwards = true;
+                }
+                // move a little backwards so get some clearance to the wall
+                if is_backwards {
+                    back_counter += 1;
+                }
+                if back_counter == 10 {
                     break 'moving;
                 }
-                self.moving(Direction::Forward, &elapsed);
+
+                self.moving(direction, &elapsed);
             } else {
                 let sleep_duration = update_interval - elapsed;
                 thread::sleep(sleep_duration);
@@ -279,6 +293,11 @@ impl Robot {
                         rotation = Rotation::Right;
                     } else if robot.sensor_wall > 92.0 {
                         rotation = Rotation::Left;
+                    }
+
+                    robot.check_collision(&room);
+                    if robot.sensor_collision {
+                        break 'wallfollow;
                     }
 
                     robot.rotate(rotation, &elapsed);
