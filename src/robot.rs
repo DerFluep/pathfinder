@@ -33,7 +33,7 @@ pub struct Robot {
     speed: f32,
     rotation_speed: f32,
     sensor_collision: bool,
-    sensor_wall: bool,
+    sensor_wall: f32,
 }
 
 impl Robot {
@@ -49,7 +49,7 @@ impl Robot {
             speed: 200.0,
             rotation_speed: 30.0,
             sensor_collision: false,
-            sensor_wall: false,
+            sensor_wall: 0.0,
         }
     }
 
@@ -121,15 +121,21 @@ impl Robot {
     }
 
     fn check_wall(&mut self, room: &Arc<Vec<Line>>) {
-        self.sensor_wall = false;
+        self.sensor_wall = 0.0;
         for wall in room.iter() {
             let state = self.state.lock().unwrap();
-            let ray1 = direction_to_vector(state.direction + 268.0);
-            let ray2 = direction_to_vector(state.direction + 272.0);
-            let distance1 = intersection_distance(state.position, ray1, *wall);
-            let distance2 = intersection_distance(state.position, ray2, *wall);
-            if distance1 <= state.radius + 2.0 && distance1 <= distance2 {
-                self.sensor_wall = true;
+            let ray1 = direction_to_vector(state.direction + 270.0);
+            let ray2 = direction_to_vector(state.direction + 275.0);
+            let dist1 = intersection_distance(state.position, ray1, *wall);
+            let dist2 = intersection_distance(state.position, ray2, *wall);
+
+            if dist1 < state.radius + 10.0 && dist2 < state.radius + 10.0 {
+                let alpha_deg: f32 = 5.0;
+                let alpha = alpha_deg.to_radians();
+                let c = (dist1.powi(2) + dist2.powi(2) - 2.0 * dist1 * dist2 * alpha.cos()).sqrt();
+                let cos_angle = (dist1.powi(2) + c.powi(2) - dist2.powi(2)) / (2.0 * dist1 * c);
+                let angle = cos_angle.clamp(-1.0, 1.0).acos().to_degrees();
+                self.sensor_wall = angle;
                 break;
             }
         }
@@ -245,7 +251,7 @@ impl Robot {
 
                     robot.lidar_scan(&room);
                     robot.check_wall(&room);
-                    if robot.sensor_wall {
+                    if robot.sensor_wall >= 90.0 {
                         break 'rotating;
                     }
                     robot.rotate(Rotation::Left, &elapsed);
@@ -267,13 +273,11 @@ impl Robot {
                     }
 
                     let mut rotation = Rotation::None;
+                    robot.lidar_scan(&room);
                     robot.check_wall(&room);
-                    if !robot.sensor_wall {
+                    if robot.sensor_wall < 88.0 {
                         rotation = Rotation::Right;
-                    }
-
-                    robot.check_collision(&room);
-                    if robot.sensor_collision {
+                    } else if robot.sensor_wall > 92.0 {
                         rotation = Rotation::Left;
                     }
 
