@@ -1,15 +1,12 @@
 use crate::{float2::Float2, line::Line};
 use std::{
-    f32::consts::PI,
     sync::atomic::{AtomicBool, Ordering},
     thread,
     time::{Duration, Instant},
 };
 
-pub const RADIANS: f32 = PI / 180.0;
-
 pub fn direction_to_vector(direction: f32) -> Float2 {
-    let radians = direction * RADIANS;
+    let radians = direction.to_radians();
     Float2::new(radians.cos(), radians.sin())
 }
 
