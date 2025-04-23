@@ -1,5 +1,10 @@
 use crate::{float2::Float2, line::Line};
-use std::f32::consts::PI;
+use std::{
+    f32::consts::PI,
+    sync::atomic::{AtomicBool, Ordering},
+    thread,
+    time::{Duration, Instant},
+};
 
 pub const RADIANS: f32 = PI / 180.0;
 
@@ -37,4 +42,32 @@ pub fn intersection_distance(origin: Float2, vector: Float2, line: Line) -> f32 
         distance = t;
     }
     distance
+}
+
+pub fn run_with_interval<F>(interval: Duration, quit: &AtomicBool, mut f: F)
+where
+    F: FnMut(Duration) -> bool,
+{
+    let mut last_updated = Instant::now();
+
+    loop {
+        let now = Instant::now();
+        let elapsed = now.duration_since(last_updated);
+
+        if elapsed >= interval {
+            last_updated = now;
+
+            if quit.load(Ordering::Relaxed) {
+                break;
+            }
+
+            // If closure returns true, break the loop
+            if f(elapsed) {
+                break;
+            }
+        } else {
+            let sleep_duration = interval - elapsed;
+            thread::sleep(sleep_duration);
+        }
+    }
 }

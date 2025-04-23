@@ -1,11 +1,11 @@
 use crate::float2::Float2;
 use crate::line::Line;
-use crate::utils::{direction_to_vector, intersection_distance};
+use crate::utils::{direction_to_vector, intersection_distance, run_with_interval};
 
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 pub enum Rotation {
     Left,
@@ -34,6 +34,7 @@ pub struct Robot {
     rotation_speed: f32,
     sensor_collision: bool,
     sensor_wall: f32,
+    interval: Duration,
 }
 
 impl Robot {
@@ -50,6 +51,7 @@ impl Robot {
             rotation_speed: 30.0,
             sensor_collision: false,
             sensor_wall: 0.0,
+            interval: Duration::from_millis(10),
         }
     }
 
@@ -163,85 +165,57 @@ impl Robot {
     }
 
     fn goto_nearest_wall(&mut self, room: &Arc<Vec<Line>>, quit: Arc<AtomicBool>) {
-        let mut last_updated = Instant::now();
-        let update_interval = Duration::from_millis(10);
-
         // rotate to nearest wall
-        'rotate: loop {
-            let now = Instant::now();
-            let elapsed = now.duration_since(last_updated);
+        run_with_interval(self.interval, &quit, |elapsed| {
+            let mut min_dist = f32::MAX;
+            let mut min_dist_dir = usize::MAX;
+            self.lidar_scan(&room);
 
-            if elapsed >= update_interval {
-                last_updated = now;
-
-                if quit.load(Ordering::Relaxed) {
-                    break 'rotate;
+            let state = self.state.lock().unwrap();
+            state.lidar.iter().enumerate().for_each(|(num, dist)| {
+                if *dist < min_dist {
+                    min_dist = *dist;
+                    min_dist_dir = num;
                 }
+            });
+            drop(state);
 
-                let mut min_dist = f32::MAX;
-                let mut min_dist_dir = usize::MAX;
-                self.lidar_scan(&room);
-
-                let state = self.state.lock().unwrap();
-                state.lidar.iter().enumerate().for_each(|(num, dist)| {
-                    if *dist < min_dist {
-                        min_dist = *dist;
-                        min_dist_dir = num;
-                    }
-                });
-                drop(state);
-
-                // 0.0 = robot forward direction
-                if min_dist_dir == 0 {
-                    break 'rotate;
-                }
-                if min_dist_dir <= 180 {
-                    self.rotate(Rotation::Left, &elapsed);
-                } else {
-                    self.rotate(Rotation::Right, &elapsed);
-                }
-            } else {
-                let sleep_duration = update_interval - elapsed;
-                thread::sleep(sleep_duration);
+            // 0.0 = robot forward direction
+            if min_dist_dir == 0 {
+                return true; // stop looping
             }
-        }
+            if min_dist_dir <= 180 {
+                self.rotate(Rotation::Left, &elapsed);
+            } else {
+                self.rotate(Rotation::Right, &elapsed);
+            }
+
+            false // continue looping
+        });
 
         // TODO convert the counter so time units instead of counting time steps
         // TODO convert backward movement from time to distance
         let mut is_backwards = false;
         let mut back_counter = 0;
-        'moving: loop {
-            let now = Instant::now();
-            let elapsed = now.duration_since(last_updated);
-
-            if elapsed >= update_interval {
-                last_updated = now;
-
-                if quit.load(Ordering::Relaxed) {
-                    break 'moving;
-                }
-
-                self.lidar_scan(&room);
-                self.check_collision(&room);
-                let mut direction = Direction::Forward;
-                if self.sensor_collision {
-                    direction = Direction::Backward;
-                    is_backwards = true;
-                }
-                // move a little backwards so get some clearance to the wall
-                if is_backwards {
-                    back_counter += 1;
-                }
-                if back_counter == 10 {
-                    break 'moving;
-                }
-
-                self.moving(direction, &elapsed);
-            } else {
-                let sleep_duration = update_interval - elapsed;
-                thread::sleep(sleep_duration);
+        run_with_interval(self.interval, &quit, |elapsed| {
+            self.lidar_scan(&room);
+            self.check_collision(&room);
+            let mut direction = Direction::Forward;
+            if self.sensor_collision {
+                direction = Direction::Backward;
+                is_backwards = true;
             }
-        }
+            // move a little backwards so get some clearance to the wall
+            if is_backwards {
+                back_counter += 1;
+            }
+            if back_counter == 10 {
+                return true;
+            }
+
+            self.moving(direction, &elapsed);
+            false
+        });
     }
 
     pub fn run(self, room: Arc<Vec<Line>>, quit: Arc<AtomicBool>) -> JoinHandle<()> {
@@ -250,70 +224,37 @@ impl Robot {
 
             robot.goto_nearest_wall(&room, Arc::clone(&quit));
 
-            let mut last_updated = Instant::now();
-            let update_interval = Duration::from_millis(10);
-            'rotating: loop {
-                let now = Instant::now();
-                let elapsed = now.duration_since(last_updated);
-
-                if elapsed >= update_interval {
-                    last_updated = now;
-
-                    if quit.load(Ordering::Relaxed) {
-                        break 'rotating;
-                    }
-
-                    robot.lidar_scan(&room);
-                    robot.check_wall(&room);
-                    if robot.sensor_wall >= 90.0 {
-                        break 'rotating;
-                    }
-                    robot.rotate(Rotation::Left, &elapsed);
-                } else {
-                    let sleep_duration = update_interval - elapsed;
-                    thread::sleep(sleep_duration);
+            // rotate 90deg to wall
+            run_with_interval(robot.interval, &quit, |elapsed| {
+                robot.lidar_scan(&room);
+                robot.check_wall(&room);
+                if robot.sensor_wall >= 90.0 {
+                    return true;
                 }
-            }
+                robot.rotate(Rotation::Left, &elapsed);
+                false
+            });
 
-            'wallfollow: loop {
-                let now = Instant::now();
-                let elapsed = now.duration_since(last_updated);
-
-                if elapsed >= update_interval {
-                    last_updated = now;
-
-                    if quit.load(Ordering::Relaxed) {
-                        break 'wallfollow;
-                    }
-
-                    let mut rotation = Rotation::None;
-                    robot.lidar_scan(&room);
-                    robot.check_wall(&room);
-                    if robot.sensor_wall < 88.0 {
-                        rotation = Rotation::Right;
-                    } else if robot.sensor_wall > 92.0 {
-                        rotation = Rotation::Left;
-                    }
-
-                    robot.check_collision(&room);
-                    if robot.sensor_collision {
-                        break 'wallfollow;
-                    }
-
-                    robot.rotate(rotation, &elapsed);
-                    robot.moving(Direction::Forward, &elapsed);
-                } else {
-                    let sleep_duration = update_interval - elapsed;
-                    thread::sleep(sleep_duration);
+            // follow wall
+            run_with_interval(robot.interval, &quit, |elapsed| {
+                let mut rotation = Rotation::None;
+                robot.lidar_scan(&room);
+                robot.check_wall(&room);
+                if robot.sensor_wall < 88.0 {
+                    rotation = Rotation::Right;
+                } else if robot.sensor_wall > 92.0 {
+                    rotation = Rotation::Left;
                 }
-            }
 
-            loop {
-                if quit.load(Ordering::Relaxed) {
-                    break;
+                robot.check_collision(&room);
+                if robot.sensor_collision {
+                    return true;
                 }
-                thread::sleep(Duration::from_millis(100));
-            }
+
+                robot.rotate(rotation, &elapsed);
+                robot.moving(Direction::Forward, &elapsed);
+                false
+            });
         })
     }
 }
