@@ -26,7 +26,7 @@ pub struct RobotState {
     pub radius: f32,
 }
 
-// speed = m/s
+// speed = mm/s
 // rotation_speed = degree/s
 pub struct Robot {
     state: Arc<Mutex<RobotState>>,
@@ -124,26 +124,21 @@ impl Robot {
 
     fn check_wall(&mut self, room: &Arc<Vec<Line>>) {
         self.sensor_wall = 0.0;
+        let mut min_dist = 50.0;
         for wall in room.iter() {
             let state = self.state.lock().unwrap();
-            let ray1 = direction_to_vector(state.direction + 270.0);
-            let ray2 = direction_to_vector(state.direction + 275.0);
-            let dist1 = intersection_distance(state.position, ray1, *wall);
-            let dist2 = intersection_distance(state.position, ray2, *wall);
-
-            if dist1 < state.radius + 10.0 && dist2 < state.radius + 10.0 {
-                let alpha_deg: f32 = 5.0;
-                let alpha = alpha_deg.to_radians();
-                let c = (dist1.powi(2) + dist2.powi(2) - 2.0 * dist1 * dist2 * alpha.cos()).sqrt();
-                let cos_angle = (dist1.powi(2) + c.powi(2) - dist2.powi(2)) / (2.0 * dist1 * c);
-                let angle = cos_angle.clamp(-1.0, 1.0).acos().to_degrees();
-                self.sensor_wall = angle;
-                break;
-            }
+            let vector = direction_to_vector(state.direction + 290.0); // shoot the ray at an 20deg angle
+            let origin = state.position
+                + direction_to_vector(state.direction + 270.0) * (state.radius - 10.0);
+            let distance = intersection_distance(origin, vector, *wall);
+            if distance < min_dist {
+                min_dist = distance
+            };
+            self.sensor_wall = min_dist;
         }
     }
 
-    fn moving(&mut self, direction: Direction, elapsed: &Duration) {
+    fn moving(&mut self, direction: &Direction, elapsed: &Duration) {
         let mut state = self.state.lock().unwrap();
         let vector = direction_to_vector(state.direction);
         match direction {
@@ -197,10 +192,10 @@ impl Robot {
         // TODO convert backward movement from time to distance
         let mut is_backwards = false;
         let mut back_counter = 0;
+        let mut direction = Direction::Forward;
         run_with_interval(self.interval, &quit, |elapsed| {
             self.lidar_scan(&room);
             self.check_collision(&room);
-            let mut direction = Direction::Forward;
             if self.sensor_collision {
                 direction = Direction::Backward;
                 is_backwards = true;
@@ -213,7 +208,7 @@ impl Robot {
                 return true;
             }
 
-            self.moving(direction, &elapsed);
+            self.moving(&direction, &elapsed);
             false
         });
     }
@@ -225,25 +220,32 @@ impl Robot {
             robot.goto_nearest_wall(&room, Arc::clone(&quit));
 
             // rotate 90deg to wall
+            let mut min_dist = 1000.0;
             run_with_interval(robot.interval, &quit, |elapsed| {
                 robot.lidar_scan(&room);
                 robot.check_wall(&room);
-                if robot.sensor_wall >= 90.0 {
+                if robot.sensor_wall < min_dist {
+                    min_dist = robot.sensor_wall;
+                }
+                if robot.sensor_wall > min_dist + 1.0 {
+                    // + <> is the offset to rotation relative to the wall
                     return true;
                 }
                 robot.rotate(Rotation::Left, &elapsed);
                 false
             });
 
+            // TODO smooth the rotation
             // follow wall
             run_with_interval(robot.interval, &quit, |elapsed| {
-                let mut rotation = Rotation::None;
+                let last_dist = robot.sensor_wall;
+                let rotation;
                 robot.lidar_scan(&room);
                 robot.check_wall(&room);
-                if robot.sensor_wall < 88.0 {
-                    rotation = Rotation::Right;
-                } else if robot.sensor_wall > 92.0 {
+                if robot.sensor_wall < last_dist {
                     rotation = Rotation::Left;
+                } else {
+                    rotation = Rotation::Right;
                 }
 
                 robot.check_collision(&room);
@@ -252,7 +254,7 @@ impl Robot {
                 }
 
                 robot.rotate(rotation, &elapsed);
-                robot.moving(Direction::Forward, &elapsed);
+                robot.moving(&Direction::Forward, &elapsed);
                 false
             });
         })
