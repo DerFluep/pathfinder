@@ -149,7 +149,7 @@ impl Robot {
         drop(state);
     }
 
-    fn rotate(&mut self, rotation: Rotation, elapsed: &Duration) {
+    fn rotate(&mut self, rotation: &Rotation, elapsed: &Duration) {
         let mut state = self.state.lock().unwrap();
         match rotation {
             Rotation::Left => state.direction += elapsed.as_secs_f32() * self.rotation_speed,
@@ -180,9 +180,9 @@ impl Robot {
                 return true; // stop looping
             }
             if min_dist_dir <= 180 {
-                self.rotate(Rotation::Left, &elapsed);
+                self.rotate(&Rotation::Left, &elapsed);
             } else {
-                self.rotate(Rotation::Right, &elapsed);
+                self.rotate(&Rotation::Right, &elapsed);
             }
 
             false // continue looping
@@ -238,7 +238,41 @@ impl Robot {
                     return true;
                 }
 
-                robot.rotate(Rotation::Left, &elapsed);
+                robot.rotate(&Rotation::Left, &elapsed);
+                false
+            });
+
+            // follow wall
+            run_with_interval(robot.interval, &quit, |elapsed| {
+                robot.scan_lidar(&room);
+                robot.check_collision(&room);
+
+                let mut min = 0;
+                let mut min_val = 10000.0;
+                let state = robot.state.lock().unwrap();
+                state.lidar.iter().enumerate().for_each(|(num, x)| {
+                    if *x < min_val {
+                        min = num;
+                        min_val = *x;
+                    }
+                });
+                drop(state);
+
+                let mut rotation = Rotation::None;
+                let mut direction = Direction::Forward;
+                if min == 270 {
+                    rotation = Rotation::None;
+                } else if min < 270 {
+                    rotation = Rotation::Right;
+                    direction = Direction::None
+                } else {
+                    rotation = Rotation::Left;
+                    direction = Direction::None
+                }
+
+                robot.rotate(&rotation, &elapsed);
+                robot.moving(&direction, &elapsed);
+
                 false
             });
         })
