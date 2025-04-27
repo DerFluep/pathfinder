@@ -59,7 +59,7 @@ impl Robot {
         Arc::clone(&self.state)
     }
 
-    fn lidar_scan(&mut self, room: &Arc<Vec<Line>>) {
+    fn scan_lidar(&mut self, room: &Arc<Vec<Line>>) {
         let mut state = self.state.lock().unwrap();
         let direction = state.direction;
         let position = state.position;
@@ -164,7 +164,7 @@ impl Robot {
         run_with_interval(self.interval, &quit, |elapsed| {
             let mut min_dist = f32::MAX;
             let mut min_dist_dir = usize::MAX;
-            self.lidar_scan(&room);
+            self.scan_lidar(&room);
 
             let state = self.state.lock().unwrap();
             state.lidar.iter().enumerate().for_each(|(num, dist)| {
@@ -194,7 +194,7 @@ impl Robot {
         let mut back_counter = 0;
         let mut direction = Direction::Forward;
         run_with_interval(self.interval, &quit, |elapsed| {
-            self.lidar_scan(&room);
+            self.scan_lidar(&room);
             self.check_collision(&room);
             if self.sensor_collision {
                 direction = Direction::Backward;
@@ -220,41 +220,25 @@ impl Robot {
             robot.goto_nearest_wall(&room, Arc::clone(&quit));
 
             // rotate 90deg to wall
-            let mut min_dist = 1000.0;
             run_with_interval(robot.interval, &quit, |elapsed| {
-                robot.lidar_scan(&room);
-                robot.check_wall(&room);
-                if robot.sensor_wall < min_dist {
-                    min_dist = robot.sensor_wall;
-                }
-                if robot.sensor_wall > min_dist + 1.0 {
-                    // + <> is the offset to rotation relative to the wall
+                robot.scan_lidar(&room);
+
+                let mut min = 0;
+                let mut min_val = 10000.0;
+                let state = robot.state.lock().unwrap();
+                state.lidar.iter().enumerate().for_each(|(num, x)| {
+                    if *x < min_val {
+                        min = num;
+                        min_val = *x;
+                    }
+                });
+                drop(state);
+
+                if min == 270 {
                     return true;
                 }
+
                 robot.rotate(Rotation::Left, &elapsed);
-                false
-            });
-
-            // TODO smooth the rotation
-            // follow wall
-            run_with_interval(robot.interval, &quit, |elapsed| {
-                let last_dist = robot.sensor_wall;
-                let rotation;
-                robot.lidar_scan(&room);
-                robot.check_wall(&room);
-                if robot.sensor_wall < last_dist {
-                    rotation = Rotation::Left;
-                } else {
-                    rotation = Rotation::Right;
-                }
-
-                robot.check_collision(&room);
-                if robot.sensor_collision {
-                    return true;
-                }
-
-                robot.rotate(rotation, &elapsed);
-                robot.moving(&Direction::Forward, &elapsed);
                 false
             });
         })
