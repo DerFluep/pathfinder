@@ -239,6 +239,8 @@ impl Robot {
             });
 
             // follow wall
+            let mut last_error = 0.0;
+            let mut integral = 0.0;
             run_with_interval(robot.interval, &quit, |elapsed| {
                 robot.scan_lidar(&room);
                 robot.check_collision(&room);
@@ -253,17 +255,27 @@ impl Robot {
                     }
                 });
 
+                let error = state.lidar[270] - (state.radius + 10.0);
+                drop(state);
+                let p = error;
+                integral += error;
+                let i = integral;
+                let d = error - last_error;
+
+                let correction = p + i * 0.01 + d * 0.1;
+                dbg!(correction);
+
                 let mut rotation = Rotation::None;
-                let direction = Direction::Forward;
-                if min_distance < state.radius + 10.0 {
+                if correction <= 0.0 {
                     rotation = Rotation::Left;
-                } else if min_distance > state.radius + 10.0 {
+                } else {
                     rotation = Rotation::Right;
                 }
-                drop(state);
 
                 robot.rotate(&rotation, &elapsed);
-                robot.moving(&direction, &elapsed);
+                robot.moving(&Direction::Forward, &elapsed);
+
+                last_error = error;
 
                 false
             });
