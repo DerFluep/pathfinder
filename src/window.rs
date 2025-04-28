@@ -17,8 +17,8 @@ use sdl3::video::Window;
 use sdl3::EventPump;
 
 const SCALE: f32 = 10.0;
-const WIDTH: u32 = 800;
-const HEIGHT: u32 = 600;
+const WIDTH: u32 = 500;
+const HEIGHT: u32 = 500;
 
 fn draw_circle(render: &mut Canvas<Window>, position: Float2, radius: f32) {
     let diameter = radius * 2.0 / SCALE;

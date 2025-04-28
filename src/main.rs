@@ -60,7 +60,7 @@ fn main() {
 
     let quit = Arc::new(AtomicBool::new(false));
 
-    let ilse = Robot::new(1000.0, 2500.0);
+    let ilse = Robot::new(300.0, 4000.0);
     let ilse_state = ilse.get_state();
     let handle = ilse.run(Arc::clone(&room), Arc::clone(&quit));
 
