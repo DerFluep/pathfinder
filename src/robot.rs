@@ -7,12 +7,6 @@ use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
 use std::time::Duration;
 
-pub enum Rotation {
-    Left,
-    Right,
-    None,
-}
-
 pub enum Direction {
     Forward,
     Backward,
