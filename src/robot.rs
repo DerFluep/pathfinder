@@ -190,25 +190,23 @@ impl Robot {
 
         // TODO convert the counter so time units instead of counting time steps
         // TODO convert backward movement from time to distance
-        let mut is_backwards = false;
-        let mut back_counter = 0;
-        let mut direction = Direction::Forward;
         run_with_interval(self.interval, &quit, |elapsed| {
             self.scan_lidar(&room);
-            self.check_collision(&room);
-            if self.sensor_collision {
-                direction = Direction::Backward;
-                is_backwards = true;
-            }
-            // move a little backwards so get some clearance to the wall
-            if is_backwards {
-                back_counter += 1;
-            }
-            if back_counter == 10 {
+
+            let mut min_dist = f32::MAX;
+            let state = self.state.lock().unwrap();
+            state.lidar.iter().for_each(|x| {
+                if *x < min_dist {
+                    min_dist = *x;
+                }
+            });
+
+            if min_dist <= state.radius + 10.0 {
                 return true;
             }
+            drop(state);
 
-            self.moving(&direction, &elapsed);
+            self.moving(&Direction::Forward, &elapsed);
             false
         });
     }
