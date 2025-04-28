@@ -149,13 +149,10 @@ impl Robot {
         drop(state);
     }
 
-    fn rotate(&mut self, rotation: &Rotation, elapsed: &Duration) {
+    fn rotate(&mut self, rotation: f32, elapsed: &Duration) {
         let mut state = self.state.lock().unwrap();
-        match rotation {
-            Rotation::Left => state.direction += elapsed.as_secs_f32() * self.rotation_speed,
-            Rotation::Right => state.direction -= elapsed.as_secs_f32() * self.rotation_speed,
-            Rotation::None => {}
-        }
+        state.direction +=
+            elapsed.as_secs_f32() * rotation.clamp(-self.rotation_speed, self.rotation_speed);
         drop(state);
     }
 
@@ -180,9 +177,9 @@ impl Robot {
                 return true; // stop looping
             }
             if min_dist_dir <= 180 {
-                self.rotate(&Rotation::Left, &elapsed);
+                self.rotate(self.rotation_speed, &elapsed);
             } else {
-                self.rotate(&Rotation::Right, &elapsed);
+                self.rotate(-self.rotation_speed, &elapsed);
             }
 
             false // continue looping
@@ -234,7 +231,7 @@ impl Robot {
                     return true;
                 }
 
-                robot.rotate(&Rotation::Left, &elapsed);
+                robot.rotate(robot.rotation_speed, &elapsed);
                 false
             });
 
@@ -255,24 +252,18 @@ impl Robot {
                     }
                 });
 
-                let error = state.lidar[270] - (state.radius + 10.0);
+                let error = min_distance - (state.radius + 15.0);
                 drop(state);
                 let p = error;
                 integral += error;
                 let i = integral;
                 let d = error - last_error;
 
-                let correction = p + i * 0.01 + d * 0.1;
-                dbg!(correction);
+                // TODO tweak p i and d values
+                let correction = p * 0.5 + i * 0.001 + d * 20.0;
+                dbg!(min_distance);
 
-                let mut rotation = Rotation::None;
-                if correction <= 0.0 {
-                    rotation = Rotation::Left;
-                } else {
-                    rotation = Rotation::Right;
-                }
-
-                robot.rotate(&rotation, &elapsed);
+                robot.rotate(-correction, &elapsed);
                 robot.moving(&Direction::Forward, &elapsed);
 
                 last_error = error;
