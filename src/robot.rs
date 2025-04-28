@@ -47,8 +47,8 @@ impl Robot {
         };
         Self {
             state: Arc::new(Mutex::new(state)),
-            speed: 200.0,
-            rotation_speed: 30.0,
+            speed: 400.0,
+            rotation_speed: 60.0,
             sensor_collision: false,
             sensor_wall: 0.0,
             interval: Duration::from_millis(10),
@@ -188,8 +188,6 @@ impl Robot {
             false // continue looping
         });
 
-        // TODO convert the counter so time units instead of counting time steps
-        // TODO convert backward movement from time to distance
         run_with_interval(self.interval, &quit, |elapsed| {
             self.scan_lidar(&room);
 
@@ -245,28 +243,24 @@ impl Robot {
                 robot.scan_lidar(&room);
                 robot.check_collision(&room);
 
-                let mut min = 0;
-                let mut min_val = 10000.0;
+                let mut min_direction = 0;
+                let mut min_distance = 10000.0;
                 let state = robot.state.lock().unwrap();
                 state.lidar.iter().enumerate().for_each(|(num, x)| {
-                    if *x < min_val {
-                        min = num;
-                        min_val = *x;
+                    if *x < min_distance {
+                        min_direction = num;
+                        min_distance = *x;
                     }
                 });
-                drop(state);
 
                 let mut rotation = Rotation::None;
-                let mut direction = Direction::Forward;
-                if min == 270 {
-                    rotation = Rotation::None;
-                } else if min < 270 {
-                    rotation = Rotation::Right;
-                    direction = Direction::None
-                } else {
+                let direction = Direction::Forward;
+                if min_distance < state.radius + 10.0 {
                     rotation = Rotation::Left;
-                    direction = Direction::None
+                } else if min_distance > state.radius + 10.0 {
+                    rotation = Rotation::Right;
                 }
+                drop(state);
 
                 robot.rotate(&rotation, &elapsed);
                 robot.moving(&direction, &elapsed);
