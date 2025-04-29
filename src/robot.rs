@@ -235,19 +235,9 @@ impl Robot {
             run_with_interval(robot.interval, &quit, |elapsed| {
                 robot.scan_lidar(&room);
                 robot.check_collision(&room);
+                robot.check_wall(&room);
 
-                let mut min_direction = 0;
-                let mut min_distance = 10000.0;
-                let state = robot.state.lock().unwrap();
-                state.lidar.iter().enumerate().for_each(|(num, x)| {
-                    if *x < min_distance {
-                        min_direction = num;
-                        min_distance = *x;
-                    }
-                });
-
-                let error = min_distance - (state.radius + 15.0);
-                drop(state);
+                let error = robot.sensor_wall - 21.5; // 21.5 ~ 10mm to the wall
                 let p = error;
                 integral += error;
                 let i = integral;
@@ -255,7 +245,6 @@ impl Robot {
 
                 // TODO tweak p i and d values
                 let correction = p * 0.5 + i * 0.001 + d * 20.0;
-                dbg!(min_distance);
 
                 robot.rotate(-correction, &elapsed);
                 robot.moving(&Direction::Forward, &elapsed);
