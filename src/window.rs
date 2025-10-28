@@ -20,11 +20,20 @@ const SCALE: f32 = 10.0;
 const WIDTH: u32 = 500;
 const HEIGHT: u32 = 500;
 
+fn draw_line_cartesian(x1: f32, y1: f32, x2: f32, y2: f32, canvas: &mut Canvas<Window>) {
+    canvas
+        .draw_line(
+            FPoint::new(x1 / SCALE, HEIGHT as f32 - y1 / SCALE),
+            FPoint::new(x2 / SCALE, HEIGHT as f32 - y2 / SCALE),
+        )
+        .unwrap();
+}
+
 fn draw_circle(render: &mut Canvas<Window>, position: Float2, radius: f32) {
     let diameter = radius * 2.0 / SCALE;
 
     let pos_x = position.get_x() / SCALE;
-    let pos_y = position.get_y() * -1.0 / SCALE + HEIGHT as f32;
+    let pos_y = HEIGHT as f32 - position.get_y() / SCALE;
     let mut x = radius / SCALE - 1.0;
     let mut y = 0.0;
     let mut tx = 1.0;
@@ -143,18 +152,13 @@ impl Viewport {
                 // Draw walls
                 self.canvas.set_draw_color(Color::RGB(255, 0, 0));
                 room.iter().for_each(|wall| {
-                    self.canvas
-                        .draw_line(
-                            FPoint::new(
-                                wall.get_a().get_x() / SCALE,
-                                wall.get_a().get_y() * -1.0 / SCALE + HEIGHT as f32,
-                            ),
-                            FPoint::new(
-                                wall.get_b().get_x() / SCALE,
-                                wall.get_b().get_y() * -1.0 / SCALE + HEIGHT as f32,
-                            ),
-                        )
-                        .unwrap();
+                    draw_line_cartesian(
+                        wall.get_a().get_x(),
+                        wall.get_a().get_y(),
+                        wall.get_b().get_x(),
+                        wall.get_b().get_y(),
+                        &mut self.canvas,
+                    );
                 });
 
                 // Draw robot
@@ -162,18 +166,13 @@ impl Viewport {
                 draw_circle(&mut self.canvas, robot_state.position, robot_state.radius);
                 let vector = direction_to_vector(robot_state.direction);
                 let line_end = vector * robot_state.radius + robot_state.position;
-                self.canvas
-                    .draw_line(
-                        FPoint::new(
-                            robot_state.position.get_x() / SCALE,
-                            robot_state.position.get_y() * -1.0 / SCALE + HEIGHT as f32,
-                        ),
-                        FPoint::new(
-                            line_end.get_x() / SCALE,
-                            line_end.get_y() * -1.0 / SCALE + HEIGHT as f32,
-                        ),
-                    )
-                    .unwrap();
+                draw_line_cartesian(
+                    robot_state.position.get_x(),
+                    robot_state.position.get_y(),
+                    line_end.get_x(),
+                    line_end.get_y(),
+                    &mut self.canvas,
+                );
 
                 // Draw Lidar
                 if self.show_lidar {
@@ -185,18 +184,13 @@ impl Viewport {
                         .for_each(|(num, distance)| {
                             let vector = direction_to_vector(num as f32 + robot_state.direction);
                             let colision_point = vector * *distance + robot_state.position;
-                            self.canvas
-                                .draw_line(
-                                    FPoint::new(
-                                        robot_state.position.get_x() / SCALE,
-                                        robot_state.position.get_y() * -1.0 / SCALE + HEIGHT as f32,
-                                    ),
-                                    FPoint::new(
-                                        colision_point.get_x() / SCALE,
-                                        colision_point.get_y() * -1.0 / SCALE + HEIGHT as f32,
-                                    ),
-                                )
-                                .unwrap()
+                            draw_line_cartesian(
+                                robot_state.position.get_x(),
+                                robot_state.position.get_y(),
+                                colision_point.get_x(),
+                                colision_point.get_y(),
+                                &mut self.canvas,
+                            );
                         });
                 }
                 self.canvas.present();
