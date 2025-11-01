@@ -16,7 +16,8 @@ use crate::robot::Robot;
 // X goes to the right
 // Y goes down
 
-// TODO update to use new Arc<Mutex<>> room
+// TODO: update to use new Arc<Mutex<>> room
+
 /* fn bounding_box(room: &Vec<Line>) {
     let (mut min_x, mut min_y) = (f32::MAX, f32::MAX);
     let (mut max_x, mut max_y) = (0.0, 0.0);

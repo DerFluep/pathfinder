@@ -13,6 +13,12 @@ pub enum Direction {
     None,
 }
 
+pub enum Rotation {
+    Left,
+    Right,
+    None,
+}
+
 pub struct RobotState {
     pub direction: f32,
     pub lidar: Vec<f32>,
@@ -155,7 +161,7 @@ impl Robot {
         run_with_interval(self.interval, &quit, |elapsed| {
             let mut min_dist = f32::MAX;
             let mut min_dist_dir = usize::MAX;
-            self.scan_lidar(&room);
+            self.scan_lidar(room);
 
             let state = self.state.lock().unwrap();
             state.lidar.iter().enumerate().for_each(|(num, dist)| {
@@ -180,7 +186,7 @@ impl Robot {
         });
 
         run_with_interval(self.interval, &quit, |elapsed| {
-            self.scan_lidar(&room);
+            self.scan_lidar(room);
 
             let mut min_dist = f32::MAX;
             let state = self.state.lock().unwrap();
@@ -210,18 +216,18 @@ impl Robot {
             run_with_interval(robot.interval, &quit, |elapsed| {
                 robot.scan_lidar(&room);
 
-                let mut min = 0;
+                let mut min_dir = 0;
                 let mut min_val = 10000.0;
                 let state = robot.state.lock().unwrap();
                 state.lidar.iter().enumerate().for_each(|(num, x)| {
                     if *x < min_val {
-                        min = num;
+                        min_dir = num;
                         min_val = *x;
                     }
                 });
                 drop(state);
 
-                if min == 270 {
+                if min_dir == 270 {
                     return true;
                 }
 
@@ -243,7 +249,7 @@ impl Robot {
                 let i = integral;
                 let d = error - last_error;
 
-                // TODO tweak p i and d values
+                // TODO: tweak p i and d values
                 let correction = p * 0.5 + i * 0.001 + d * 20.0;
 
                 robot.rotate(-correction, &elapsed);

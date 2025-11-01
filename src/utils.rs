@@ -35,7 +35,7 @@ pub fn intersection_distance(origin: Float2, vector: Float2, line: Line) -> f32 
 
     // max lidar distance 20m
     let mut distance = 20000.0;
-    if t >= 0.0 && 0.0 <= s && s <= 1.0 {
+    if t >= 0.0 && (0.0..=1.0).contains(&s) {
         distance = t;
     }
     distance

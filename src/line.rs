@@ -38,11 +38,11 @@ impl Line {
 
         // no intersection found
         if determinant == 0.0 {
-            return Float2::new(f32::MAX, f32::MAX);
+            Float2::new(f32::MAX, f32::MAX)
         } else {
             let x = (b2 * c1 - b1 * c2) / determinant;
             let y = (a1 * c2 - a2 * c1) / determinant;
-            return Float2::new(x, y);
+            Float2::new(x, y)
         }
     }
 }
