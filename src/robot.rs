@@ -97,20 +97,24 @@ impl Robot {
             }
 
             // length of the wall
-            let len = ((x1 - x2).powi(2) + (y1 - y2).powi(2)).sqrt();
+            let wall_len = ((x1 - x2).powi(2) + (y1 - y2).powi(2)).sqrt();
 
             // dot product of wall and circle
-            let dot = (((pos_x - x1) * (x2 - x1)) + ((pos_y - y1) * (y2 - y1))) / len.powi(2);
+            let dot = (((pos_x - x1) * (x2 - x1)) + ((pos_y - y1) * (y2 - y1))) / wall_len.powi(2);
 
-            // find closest point to the wall
+            // find closest point on the wall
             let closest_x = x1 + (dot * (x2 - x1));
             let closest_y = y1 + (dot * (y2 - y1));
 
             // check if closest point is on the line
+            // distances from collison point to line points
             let d1 = ((x1 - closest_x).powi(2) + (y1 - closest_y).powi(2)).sqrt();
             let d2 = ((x2 - closest_x).powi(2) + (y2 - closest_y).powi(2)).sqrt();
 
-            if (d1 + d2 - len).abs() < 1e-9 {
+            // check if sum(d1 + d2) - wall length == 0.0
+            // if so the point lays between the wall points
+            // 1e-9 instead of 0.0 for floating inacurassis
+            if (d1 + d2 - wall_len).abs() < 1e-9 {
                 let dist = ((pos_x - closest_x).powi(2) + (pos_y - closest_y).powi(2)).sqrt();
                 if dist <= radius {
                     self.sensor_collision = true;
