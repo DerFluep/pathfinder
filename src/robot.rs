@@ -13,12 +13,6 @@ pub enum Direction {
     None,
 }
 
-pub enum Rotation {
-    Left,
-    Right,
-    None,
-}
-
 pub struct RobotState {
     pub direction: f32,
     pub lidar: Vec<f32>,
@@ -40,10 +34,10 @@ pub struct Robot {
 impl Robot {
     pub fn new(x: f32, y: f32) -> Self {
         let state = RobotState {
-            direction: 0.0,
+            direction: 0.0, // eastside
             lidar: vec![0.0; 360],
             position: Float2::new(x, y),
-            radius: 175.0,
+            radius: 175.0, // mm
         };
         Self {
             state: Arc::new(Mutex::new(state)),
@@ -94,30 +88,34 @@ impl Robot {
             let y1 = wall.get_a().get_y();
             let y2 = wall.get_b().get_y();
 
-            // check if the line is vertical
-            // vertical lines have no slope
-            if x1 == x2 {
-                let distance = (pos_x - x1).abs();
-                if distance <= radius {
+            // are the line endpoints inside the circle?
+            let inside1 = ((x1 - pos_x).powi(2) + (y1 - pos_y).powi(2)).sqrt() <= radius;
+            let inside2 = ((x2 - pos_x).powi(2) + (y2 - pos_y).powi(2)).sqrt() <= radius;
+            if inside1 || inside2 {
+                self.sensor_collision = true;
+                break;
+            }
+
+            // length of the wall
+            let len = ((x1 - x2).powi(2) + (y1 - y2).powi(2)).sqrt();
+
+            // dot product of wall and circle
+            let dot = (((pos_x - x1) * (x2 - x1)) + ((pos_y - y1) * (y2 - y1))) / len.powi(2);
+
+            // find closest point to the wall
+            let closest_x = x1 + (dot * (x2 - x1));
+            let closest_y = y1 + (dot * (y2 - y1));
+
+            // check if closest point is on the line
+            let d1 = ((x1 - closest_x).powi(2) + (y1 - closest_y).powi(2)).sqrt();
+            let d2 = ((x2 - closest_x).powi(2) + (y2 - closest_y).powi(2)).sqrt();
+
+            if (d1 + d2 - len).abs() < 1e-9 {
+                let dist = ((pos_x - closest_x).powi(2) + (pos_y - closest_y).powi(2)).sqrt();
+                if dist <= radius {
                     self.sensor_collision = true;
                     break;
                 }
-            }
-
-            let slope = (y2 - y1) / (x2 - x1);
-            let y_intercept = y1 - slope * x1;
-
-            let a = 1.0 + slope.powi(2);
-            let b = 2.0 * slope * (y_intercept - pos_y) - 2.0 * pos_x;
-            let c = pos_x.powi(2) + (y_intercept - pos_y).powi(2) - radius.powi(2);
-
-            let discriminant = b.powi(2) - 4.0 * a * c;
-
-            // discriminant == 0.0 -> one intersection point
-            // discriminant > 0.0 -> two intersection points
-            if discriminant >= 0.0 {
-                self.sensor_collision = true;
-                break;
             }
         }
     }
@@ -149,6 +147,7 @@ impl Robot {
         drop(state);
     }
 
+    // + = counter clockwise; - = clockwise
     fn rotate(&mut self, rotation: f32, elapsed: &Duration) {
         let mut state = self.state.lock().unwrap();
         state.direction +=
@@ -227,6 +226,7 @@ impl Robot {
                 });
                 drop(state);
 
+                // 270 = right side
                 if min_dir == 270 {
                     return true;
                 }
@@ -242,6 +242,10 @@ impl Robot {
                 robot.scan_lidar(&room);
                 robot.check_collision(&room);
                 robot.check_wall(&room);
+
+                if robot.sensor_collision {
+                    return true;
+                }
 
                 let error = robot.sensor_wall - 21.5; // 21.5 ~ 10mm to the wall
                 let p = error;

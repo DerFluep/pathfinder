@@ -58,15 +58,19 @@ fn main() {
         Line::new(Float2::new(0.0, 5000.0), Float2::new(5000.0, 5000.0)),
         Line::new(Float2::new(0.0, 0.0), Float2::new(0.0, 5000.0)),
     ]);
+    let room2 = Arc::new(vec![
+        Line::new(Float2::new(2500.0, 5000.0), Float2::new(2500.0, 2500.0)),
+        Line::new(Float2::new(3000.0, 2500.0), Float2::new(0.0, 2500.0)),
+    ]);
 
     let quit = Arc::new(AtomicBool::new(false));
 
-    let ilse = Robot::new(300.0, 4000.0);
+    let ilse = Robot::new(3000.0, 4700.0);
     let ilse_state = ilse.get_state();
-    let handle = ilse.run(Arc::clone(&room), Arc::clone(&quit));
+    let robot_thread = ilse.run(Arc::clone(&room2), Arc::clone(&quit));
 
     let mut viewport = Viewport::new();
-    viewport.draw(Arc::clone(&room), &ilse_state, Arc::clone(&quit));
+    viewport.draw(Arc::clone(&room2), &ilse_state, Arc::clone(&quit));
 
-    handle.join().unwrap();
+    robot_thread.join().unwrap();
 }
