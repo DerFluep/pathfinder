@@ -7,6 +7,9 @@ use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
 use std::time::Duration;
 
+const WALL_MAX_DIST: f32 = 50.0;
+const LIDAR_MAX_DIST: f32 = 10000.0;
+
 pub enum Direction {
     Forward,
     Backward,
@@ -63,7 +66,7 @@ impl Robot {
             .enumerate()
             .for_each(|(num, distance)| {
                 let ray = direction_to_vector(num as f32 + direction);
-                let mut closest = 10000.0;
+                let mut closest = LIDAR_MAX_DIST;
                 room.iter().for_each(|wall| {
                     let distance = intersection_distance(position, ray, *wall);
                     if distance < closest {
@@ -126,7 +129,7 @@ impl Robot {
 
     fn check_wall(&mut self, room: &Arc<Vec<Line>>) {
         self.sensor_wall = 0.0;
-        let mut min_dist = 50.0;
+        let mut min_dist = WALL_MAX_DIST;
         for wall in room.iter() {
             let state = self.state.lock().unwrap();
             let vector = direction_to_vector(state.direction + 290.0); // shoot the ray at an 20deg angle
@@ -220,7 +223,7 @@ impl Robot {
                 robot.scan_lidar(&room);
 
                 let mut min_dir = 0;
-                let mut min_val = 10000.0;
+                let mut min_val = LIDAR_MAX_DIST;
                 let state = robot.state.lock().unwrap();
                 state.lidar.iter().enumerate().for_each(|(num, x)| {
                     if *x < min_val {
@@ -242,13 +245,16 @@ impl Robot {
             // follow wall
             let mut last_error = 0.0;
             let mut integral = 0.0;
+            let mut move_dir = Direction::Forward;
             run_with_interval(robot.interval, &quit, |elapsed| {
                 robot.scan_lidar(&room);
                 robot.check_collision(&room);
                 robot.check_wall(&room);
 
-                if robot.sensor_collision {
-                    return true;
+                if robot.sensor_wall == WALL_MAX_DIST {
+                    move_dir = Direction::None;
+                } else {
+                    move_dir = Direction::Forward;
                 }
 
                 let error = robot.sensor_wall - 21.5; // 21.5 ~ 10mm to the wall
@@ -261,7 +267,7 @@ impl Robot {
                 let correction = p * 0.5 + i * 0.001 + d * 20.0;
 
                 robot.rotate(-correction, &elapsed);
-                robot.moving(&Direction::Forward, &elapsed);
+                robot.moving(&move_dir, &elapsed);
 
                 last_error = error;
 

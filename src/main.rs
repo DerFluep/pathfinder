@@ -60,7 +60,7 @@ fn main() {
     ]);
     let room2 = Arc::new(vec![
         Line::new(Float2::new(2500.0, 5000.0), Float2::new(2500.0, 2500.0)),
-        Line::new(Float2::new(3000.0, 2500.0), Float2::new(0.0, 2500.0)),
+        Line::new(Float2::new(2500.0, 2500.0), Float2::new(0.0, 2500.0)),
     ]);
 
     let quit = Arc::new(AtomicBool::new(false));
